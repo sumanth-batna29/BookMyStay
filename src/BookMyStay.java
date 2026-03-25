@@ -1,20 +1,22 @@
 import java.util.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
- * Hotel Booking Management System - Use Case 7
+ * Hotel Booking Management System - Use Case 8
  *
- * Add-On Service Selection
+ * Booking History & Reporting
  *
  * This class demonstrates:
- * - Map and List combination for one-to-many relationships
- * - Add-on service attachment to reservations
- * - Composition over inheritance pattern
- * - Cost aggregation and calculation
- * - Separation of core and optional features
- * - Business extensibility without modifying core logic
+ * - List data structure for ordered historical records
+ * - Audit trail creation from confirmed bookings
+ * - Separation of data storage and reporting
+ * - Historical tracking and persistence mindset
+ * - Comprehensive reporting and analysis
+ * - Operational visibility and administrative oversight
  *
  * @author sumanth-batna29
- * @version 7.1
+ * @version 8.1
  * @since 2026-03-25
  */
 public class BookMyStay {
@@ -25,7 +27,6 @@ public class BookMyStay {
 
     /**
      * Abstract Room class representing a generalized hotel room concept.
-     * All concrete room types inherit from this class.
      */
     abstract static class Room {
         protected String roomType;
@@ -34,9 +35,6 @@ public class BookMyStay {
         protected String amenities;
         protected int roomSize;
 
-        /**
-         * Constructor for Room class
-         */
         public Room(String roomType, int numberOfBeds, double pricePerNight,
                     String amenities, int roomSize) {
             this.roomType = roomType;
@@ -46,14 +44,8 @@ public class BookMyStay {
             this.roomSize = roomSize;
         }
 
-        /**
-         * Abstract method to display room details
-         */
         abstract void displayRoomDetails();
 
-        /**
-         * Display basic room information
-         */
         public void displayBasicInfo() {
             System.out.println("Room Type: " + roomType);
             System.out.println("Number of Beds: " + numberOfBeds);
@@ -62,37 +54,22 @@ public class BookMyStay {
             System.out.println("Amenities: " + amenities);
         }
 
-        /**
-         * Get room type
-         */
         public String getRoomType() {
             return roomType;
         }
 
-        /**
-         * Get price per night
-         */
         public double getPricePerNight() {
             return pricePerNight;
         }
 
-        /**
-         * Get number of beds
-         */
         public int getNumberOfBeds() {
             return numberOfBeds;
         }
 
-        /**
-         * Get room size
-         */
         public int getRoomSize() {
             return roomSize;
         }
 
-        /**
-         * Get amenities
-         */
         public String getAmenities() {
             return amenities;
         }
@@ -102,9 +79,6 @@ public class BookMyStay {
     // CONCRETE ROOM CLASSES
     // ============================================
 
-    /**
-     * SingleRoom class - Concrete implementation of Room
-     */
     static class SingleRoom extends Room {
         public SingleRoom() {
             super("Single Room", 1, 2000.0,
@@ -120,9 +94,6 @@ public class BookMyStay {
         }
     }
 
-    /**
-     * DoubleRoom class - Concrete implementation of Room
-     */
     static class DoubleRoom extends Room {
         public DoubleRoom() {
             super("Double Room", 2, 3500.0,
@@ -138,9 +109,6 @@ public class BookMyStay {
         }
     }
 
-    /**
-     * SuiteRoom class - Concrete implementation of Room
-     */
     static class SuiteRoom extends Room {
         public SuiteRoom() {
             super("Suite Room", 2, 6000.0,
@@ -158,33 +126,16 @@ public class BookMyStay {
     }
 
     // ============================================
-    // UC7: ADD-ON SERVICE CLASS (NEW)
+    // ADD-ON SERVICE CLASS
     // ============================================
 
-    /**
-     * UC7: AddOnService class - Represents an optional service offering
-     *
-     * Encapsulates information about optional add-on services like breakfast,
-     * airport transfers, spa packages, etc.
-     * Uses composition pattern to attach to reservations.
-     */
     static class AddOnService {
-
         private String serviceId;
         private String serviceName;
         private String serviceDescription;
         private double servicePrice;
-        private String serviceCategory; // "Meals", "Transport", "Spa", "Entertainment"
+        private String serviceCategory;
 
-        /**
-         * UC7: Constructor - Create an add-on service
-         *
-         * @param serviceId Unique service ID
-         * @param serviceName Name of the service
-         * @param serviceDescription Description of the service
-         * @param servicePrice Price of the service
-         * @param serviceCategory Category of the service
-         */
         public AddOnService(String serviceId, String serviceName,
                             String serviceDescription, double servicePrice,
                             String serviceCategory) {
@@ -195,50 +146,20 @@ public class BookMyStay {
             this.serviceCategory = serviceCategory;
         }
 
-        /**
-         * UC7: Get service ID
-         */
         public String getServiceId() {
             return serviceId;
         }
 
-        /**
-         * UC7: Get service name
-         */
         public String getServiceName() {
             return serviceName;
         }
 
-        /**
-         * UC7: Get service description
-         */
-        public String getServiceDescription() {
-            return serviceDescription;
-        }
-
-        /**
-         * UC7: Get service price
-         */
         public double getServicePrice() {
             return servicePrice;
         }
 
-        /**
-         * UC7: Get service category
-         */
         public String getServiceCategory() {
             return serviceCategory;
-        }
-
-        /**
-         * UC7: Display service details
-         */
-        public void displayDetails() {
-            System.out.println("Service ID: " + serviceId);
-            System.out.println("Service Name: " + serviceName);
-            System.out.println("Description: " + serviceDescription);
-            System.out.println("Price: ₹" + servicePrice);
-            System.out.println("Category: " + serviceCategory);
         }
 
         @Override
@@ -251,11 +172,7 @@ public class BookMyStay {
     // RESERVATION CLASS
     // ============================================
 
-    /**
-     * Reservation class - Represents a guest's booking intent
-     */
     static class Reservation {
-
         private String reservationId;
         private String guestName;
         private String requestedRoomType;
@@ -263,10 +180,10 @@ public class BookMyStay {
         private long requestTimestamp;
         private String status;
         private String assignedRoomId;
+        private List<AddOnService> selectedServices;
+        private double totalCost;
+        private LocalDateTime confirmationTime;
 
-        /**
-         * Constructor - Create a new reservation
-         */
         public Reservation(String reservationId, String guestName,
                            String requestedRoomType, int numberOfNights) {
             this.reservationId = reservationId;
@@ -276,82 +193,77 @@ public class BookMyStay {
             this.requestTimestamp = System.currentTimeMillis();
             this.status = "Pending";
             this.assignedRoomId = null;
+            this.selectedServices = new ArrayList<>();
+            this.totalCost = 0.0;
+            this.confirmationTime = null;
         }
 
-        /**
-         * Get reservation ID
-         */
         public String getReservationId() {
             return reservationId;
         }
 
-        /**
-         * Get guest name
-         */
         public String getGuestName() {
             return guestName;
         }
 
-        /**
-         * Get requested room type
-         */
         public String getRequestedRoomType() {
             return requestedRoomType;
         }
 
-        /**
-         * Get number of nights
-         */
         public int getNumberOfNights() {
             return numberOfNights;
         }
 
-        /**
-         * Get request timestamp
-         */
-        public long getRequestTimestamp() {
-            return requestTimestamp;
-        }
-
-        /**
-         * Get reservation status
-         */
         public String getStatus() {
             return status;
         }
 
-        /**
-         * Set reservation status
-         */
         public void setStatus(String status) {
             this.status = status;
         }
 
-        /**
-         * Get assigned room ID
-         */
         public String getAssignedRoomId() {
             return assignedRoomId;
         }
 
-        /**
-         * Set assigned room ID
-         */
         public void setAssignedRoomId(String roomId) {
             this.assignedRoomId = roomId;
         }
 
-        /**
-         * Display reservation details
-         */
+        public List<AddOnService> getSelectedServices() {
+            return selectedServices;
+        }
+
+        public void addService(AddOnService service) {
+            selectedServices.add(service);
+        }
+
+        public double getTotalCost() {
+            return totalCost;
+        }
+
+        public void setTotalCost(double cost) {
+            this.totalCost = cost;
+        }
+
+        public LocalDateTime getConfirmationTime() {
+            return confirmationTime;
+        }
+
+        public void setConfirmationTime(LocalDateTime time) {
+            this.confirmationTime = time;
+        }
+
         public void displayDetails() {
             System.out.println("Reservation ID: " + reservationId);
             System.out.println("Guest Name: " + guestName);
             System.out.println("Room Type: " + requestedRoomType);
+            System.out.println("Assigned Room: " + assignedRoomId);
             System.out.println("Number of Nights: " + numberOfNights);
             System.out.println("Status: " + status);
-            if (assignedRoomId != null) {
-                System.out.println("Assigned Room: " + assignedRoomId);
+            System.out.println("Total Cost: ₹" + totalCost);
+            if (confirmationTime != null) {
+                System.out.println("Confirmation Time: " + confirmationTime);
             }
         }
 
@@ -369,26 +281,16 @@ public class BookMyStay {
     // ROOM INVENTORY CLASS
     // ============================================
 
-    /**
-     * RoomInventory class - Centralized inventory management
-     */
     static class RoomInventory {
-
         private HashMap<String, Integer> inventoryMap;
         private HashMap<String, Integer> totalRoomsMap;
 
-        /**
-         * Constructor - Initialize inventory
-         */
         public RoomInventory() {
             this.inventoryMap = new HashMap<>();
             this.totalRoomsMap = new HashMap<>();
             initializeInventory();
         }
 
-        /**
-         * Initialize inventory with all room types
-         */
         private void initializeInventory() {
             System.out.println("Initializing centralized room inventory...");
 
@@ -403,30 +305,18 @@ public class BookMyStay {
             System.out.println("✓ Inventory initialized successfully!");
         }
 
-        /**
-         * Get available rooms for a specific room type
-         */
         public int getAvailableRooms(String roomType) {
             return inventoryMap.getOrDefault(roomType, 0);
         }
 
-        /**
-         * Get total rooms for a specific room type
-         */
         public int getTotalRooms(String roomType) {
             return totalRoomsMap.getOrDefault(roomType, 0);
         }
 
-        /**
-         * Check if room type exists in inventory
-         */
         public boolean roomTypeExists(String roomType) {
             return inventoryMap.containsKey(roomType);
         }
 
-        /**
-         * Decrement room availability
-         */
         public boolean decrementRoomCount(String roomType) {
             if (!roomTypeExists(roomType)) {
                 return false;
@@ -440,9 +330,6 @@ public class BookMyStay {
             return false;
         }
 
-        /**
-         * Display all room types and their availability
-         */
         public void displayInventory() {
             System.out.println("\n========================================");
             System.out.println("    CENTRALIZED ROOM INVENTORY (HashMap) ");
@@ -466,9 +353,6 @@ public class BookMyStay {
             System.out.println("========================================");
         }
 
-        /**
-         * Display inventory as a visual bar
-         */
         private void displayInventoryBar(int available, int total) {
             System.out.print("     [");
             for (int i = 0; i < total; i++) {
@@ -486,25 +370,15 @@ public class BookMyStay {
     // BOOKING REQUEST QUEUE CLASS
     // ============================================
 
-    /**
-     * BookingRequestQueue class - FIFO booking request management
-     */
     static class BookingRequestQueue {
-
         private Queue<Reservation> requestQueue;
         private int reservationCounter;
 
-        /**
-         * Constructor - Initialize booking request queue
-         */
         public BookingRequestQueue() {
             this.requestQueue = new LinkedList<>();
             this.reservationCounter = 1000;
         }
 
-        /**
-         * Add a booking request to the queue
-         */
         public Reservation addBookingRequest(String guestName,
                                              String requestedRoomType,
                                              int numberOfNights) {
@@ -515,30 +389,18 @@ public class BookMyStay {
             return reservation;
         }
 
-        /**
-         * Get the next booking request from queue
-         */
         public Reservation peekNextRequest() {
             return requestQueue.peek();
         }
 
-        /**
-         * Remove and return the next booking request
-         */
         public Reservation pollNextRequest() {
             return requestQueue.poll();
         }
 
-        /**
-         * Check if queue has pending requests
-         */
         public boolean hasPendingRequests() {
             return !requestQueue.isEmpty();
         }
 
-        /**
-         * Get number of pending requests
-         */
         public int getPendingRequestCount() {
             return requestQueue.size();
         }
@@ -548,18 +410,11 @@ public class BookMyStay {
     // ROOM ALLOCATION SERVICE CLASS
     // ============================================
 
-    /**
-     * RoomAllocationService class - Safe room allocation
-     */
     static class RoomAllocationService {
-
         private Set<String> allocatedRoomIds;
         private HashMap<String, Set<String>> roomTypeToAllocatedIds;
         private HashMap<String, Integer> roomIdCounters;
 
-        /**
-         * Constructor - Initialize allocation service
-         */
         public RoomAllocationService() {
             this.allocatedRoomIds = new HashSet<>();
             this.roomTypeToAllocatedIds = new HashMap<>();
@@ -568,9 +423,6 @@ public class BookMyStay {
             initializeAllocationService();
         }
 
-        /**
-         * Initialize allocation service with room types
-         */
         private void initializeAllocationService() {
             System.out.println("Initializing room allocation service...");
 
@@ -585,9 +437,6 @@ public class BookMyStay {
             System.out.println("✓ Allocation service initialized successfully!");
         }
 
-        /**
-         * Generate unique room ID for a room type
-         */
         private String generateUniqueRoomId(String roomType) {
             int counter = roomIdCounters.getOrDefault(roomType, 1);
             String roomId = roomType.substring(0, 1) + counter;
@@ -597,16 +446,10 @@ public class BookMyStay {
             return roomId;
         }
 
-        /**
-         * Check if room ID already allocated
-         */
         private boolean isRoomIdAllocated(String roomId) {
             return allocatedRoomIds.contains(roomId);
         }
 
-        /**
-         * Allocate room to reservation
-         */
         public boolean allocateRoom(Reservation reservation, RoomInventory inventory) {
             String roomType = reservation.getRequestedRoomType();
 
@@ -641,292 +484,347 @@ public class BookMyStay {
 
             reservation.setAssignedRoomId(assignedRoomId);
             reservation.setStatus("Confirmed");
+            reservation.setConfirmationTime(LocalDateTime.now());
 
             return true;
-        }
-
-        /**
-         * Get allocated room IDs
-         */
-        public Set<String> getAllocatedRoomIds(String roomType) {
-            return roomTypeToAllocatedIds.getOrDefault(roomType, new HashSet<>());
         }
     }
 
     // ============================================
-    // UC7: ADD-ON SERVICE MANAGER CLASS (NEW)
+    // ADD-ON SERVICE MANAGER CLASS
     // ============================================
 
-    /**
-     * UC7: AddOnServiceManager class - Manages add-on service selection
-     *
-     * Handles the attachment of optional services to reservations.
-     * Uses Map<String, List<AddOnService>> to store one-to-many relationship.
-     * Calculates additional costs and maintains separation from core booking.
-     */
     static class AddOnServiceManager {
-
-        // UC7: Catalog of available add-on services
         private Map<String, AddOnService> serviceCatalog;
 
-        // UC7: Map from reservation ID to list of selected services
-        private Map<String, List<AddOnService>> reservationServices;
-
-        /**
-         * UC7: Constructor - Initialize service manager
-         */
         public AddOnServiceManager() {
             this.serviceCatalog = new HashMap<>();
-            this.reservationServices = new HashMap<>();
-
             initializeServiceCatalog();
         }
 
-        /**
-         * UC7: Initialize service catalog with available services
-         */
         private void initializeServiceCatalog() {
             System.out.println("Initializing add-on service catalog...");
 
-            // UC7: Meals category
             serviceCatalog.put("SVC-101", new AddOnService("SVC-101",
                     "Continental Breakfast", "Fresh breakfast for 2 guests", 500.0, "Meals"));
             serviceCatalog.put("SVC-102", new AddOnService("SVC-102",
                     "Evening Dinner", "3-course dinner for 2 guests", 1500.0, "Meals"));
-            serviceCatalog.put("SVC-103", new AddOnService("SVC-103",
-                    "In-Room Dining", "Premium in-room meal service", 800.0, "Meals"));
-
-            // UC7: Transport category
             serviceCatalog.put("SVC-201", new AddOnService("SVC-201",
                     "Airport Transfer", "Pick-up from airport", 400.0, "Transport"));
-            serviceCatalog.put("SVC-202", new AddOnService("SVC-202",
-                    "City Tour", "Guided city tour (4 hours)", 1200.0, "Transport"));
-
-            // UC7: Spa category
             serviceCatalog.put("SVC-301", new AddOnService("SVC-301",
                     "Spa Treatment", "Relaxation spa package (1 hour)", 2000.0, "Spa"));
-            serviceCatalog.put("SVC-302", new AddOnService("SVC-302",
-                    "Massage Therapy", "Professional massage (1 hour)", 1500.0, "Spa"));
-
-            // UC7: Entertainment category
             serviceCatalog.put("SVC-401", new AddOnService("SVC-401",
                     "Late Checkout", "Checkout until 6 PM", 500.0, "Entertainment"));
-            serviceCatalog.put("SVC-402", new AddOnService("SVC-402",
-                    "Movie Night", "In-room movie package", 300.0, "Entertainment"));
 
-            System.out.println("✓ Service catalog initialized with " +
-                    serviceCatalog.size() + " services!");
+            System.out.println("✓ Service catalog initialized!");
         }
 
-        /**
-         * UC7: Get list of available services by category
-         *
-         * @param category Service category
-         * @return List of services in that category
-         */
-        public List<AddOnService> getServicesByCategory(String category) {
-            List<AddOnService> categoryServices = new ArrayList<>();
-
-            for (AddOnService service : serviceCatalog.values()) {
-                if (service.getServiceCategory().equals(category)) {
-                    categoryServices.add(service);
-                }
-            }
-
-            return categoryServices;
-        }
-
-        /**
-         * UC7: Get service by ID
-         *
-         * @param serviceId Service ID
-         * @return AddOnService object or null if not found
-         */
         public AddOnService getServiceById(String serviceId) {
             return serviceCatalog.get(serviceId);
         }
+    }
+
+    // ============================================
+    // UC8: BOOKING HISTORY CLASS (NEW)
+    // ============================================
+
+    /**
+     * UC8: BookingHistory class - Maintains chronological record of confirmed bookings
+     *
+     * Uses List<Reservation> to store confirmed bookings in insertion order.
+     * Serves as audit trail for operational visibility and historical tracking.
+     * Enables administrators to review completed transactions.
+     */
+    static class BookingHistory {
+
+        // UC8: List maintains bookings in confirmation order (ordered storage)
+        private List<Reservation> confirmedBookings;
 
         /**
-         * UC7: Add service to reservation
-         * Time Complexity: O(1) average for both get and add operations
-         *
-         * @param reservationId Reservation ID
-         * @param serviceId Service ID
-         * @return true if service added successfully, false otherwise
+         * UC8: Constructor - Initialize booking history
          */
-        public boolean addServiceToReservation(String reservationId, String serviceId) {
-            AddOnService service = serviceCatalog.get(serviceId);
-
-            if (service == null) {
-                System.out.println("✗ ERROR: Service '" + serviceId + "' not found!");
-                return false;
-            }
-
-            // UC7: Get or create service list for this reservation
-            List<AddOnService> services = reservationServices.computeIfAbsent(
-                    reservationId, k -> new ArrayList<>());
-
-            // UC7: Check if service already added to avoid duplicates
-            for (AddOnService existingService : services) {
-                if (existingService.getServiceId().equals(serviceId)) {
-                    System.out.println("⚠ Service already added to reservation!");
-                    return false;
-                }
-            }
-
-            services.add(service);
-            return true;
+        public BookingHistory() {
+            // UC8: LinkedList for efficient insertion and preserves order
+            this.confirmedBookings = new ArrayList<>();
         }
 
         /**
-         * UC7: Remove service from reservation
+         * UC8: Add confirmed booking to history
+         * Time Complexity: O(1) for ArrayList append operation
          *
-         * @param reservationId Reservation ID
-         * @param serviceId Service ID
-         * @return true if service removed, false if not found
+         * @param reservation Confirmed reservation to record
          */
-        public boolean removeServiceFromReservation(String reservationId, String serviceId) {
-            List<AddOnService> services = reservationServices.get(reservationId);
-
-            if (services == null) {
-                return false;
-            }
-
-            return services.removeIf(s -> s.getServiceId().equals(serviceId));
-        }
-
-        /**
-         * UC7: Get all services for a reservation
-         *
-         * @param reservationId Reservation ID
-         * @return List of services for the reservation
-         */
-        public List<AddOnService> getServicesForReservation(String reservationId) {
-            return reservationServices.getOrDefault(reservationId, new ArrayList<>());
-        }
-
-        /**
-         * UC7: Calculate total add-on cost for reservation
-         * Time Complexity: O(n) where n = number of services
-         *
-         * @param reservationId Reservation ID
-         * @return Total cost of all services
-         */
-        public double calculateAddOnCost(String reservationId) {
-            List<AddOnService> services = getServicesForReservation(reservationId);
-
-            double totalCost = 0.0;
-            for (AddOnService service : services) {
-                totalCost += service.getServicePrice();
-            }
-
-            return totalCost;
-        }
-
-        /**
-         * UC7: Calculate total booking cost (room + services)
-         *
-         * @param roomPrice Price per night
-         * @param numberOfNights Number of nights
-         * @param reservationId Reservation ID
-         * @return Total booking cost
-         */
-        public double calculateTotalBookingCost(double roomPrice, int numberOfNights,
-                                                String reservationId) {
-            double roomCost = roomPrice * numberOfNights;
-            double addOnCost = calculateAddOnCost(reservationId);
-
-            return roomCost + addOnCost;
-        }
-
-        /**
-         * UC7: Display all available services
-         */
-        public void displayAllServices() {
-            System.out.println("\n========================================");
-            System.out.println("    AVAILABLE ADD-ON SERVICES           ");
-            System.out.println("========================================");
-
-            Map<String, List<AddOnService>> servicesByCategory = new HashMap<>();
-
-            for (AddOnService service : serviceCatalog.values()) {
-                String category = service.getServiceCategory();
-                servicesByCategory.computeIfAbsent(category, k -> new ArrayList<>())
-                        .add(service);
-            }
-
-            for (Map.Entry<String, List<AddOnService>> entry :
-                    servicesByCategory.entrySet()) {
-                System.out.println("\n" + entry.getKey() + ":");
-
-                int position = 1;
-                for (AddOnService service : entry.getValue()) {
-                    System.out.println("  " + position + ". " + service);
-                    System.out.println("     " + service.getServiceDescription());
-                    position++;
-                }
-            }
-
-            System.out.println("\n========================================");
-        }
-
-        /**
-         * UC7: Display services for a specific reservation
-         *
-         * @param reservationId Reservation ID
-         * @param guestName Guest name
-         */
-        public void displayReservationServices(String reservationId, String guestName) {
-            List<AddOnService> services = getServicesForReservation(reservationId);
-
-            System.out.println("\n--- Services for " + guestName + " ---");
-
-            if (services.isEmpty()) {
-                System.out.println("No add-on services selected");
-                System.out.println("Add-on Cost: ₹0");
+        public void recordConfirmedBooking(Reservation reservation) {
+            if (reservation.getStatus().equals("Confirmed")) {
+                confirmedBookings.add(reservation);
+                System.out.println("✓ Booking recorded in history: " +
+                        reservation.getReservationId());
             } else {
-                System.out.println("Selected Services (" + services.size() + "):");
-
-                int position = 1;
-                double totalCost = 0;
-
-                for (AddOnService service : services) {
-                    System.out.println("  " + position + ". " + service);
-                    totalCost += service.getServicePrice();
-                    position++;
-                }
-
-                System.out.println("Add-on Cost: ₹" + totalCost);
+                System.out.println("✗ Only confirmed bookings can be recorded!");
             }
         }
 
         /**
-         * UC7: Display service statistics
+         * UC8: Get all confirmed bookings (read-only view)
+         *
+         * @return Unmodifiable list of confirmed bookings
          */
-        public void displayServiceStatistics() {
+        public List<Reservation> getAllBookings() {
+            return Collections.unmodifiableList(confirmedBookings);
+        }
+
+        /**
+         * UC8: Get booking by reservation ID
+         * Time Complexity: O(n) for linear search
+         *
+         * @param reservationId Reservation ID to search
+         * @return Reservation if found, null otherwise
+         */
+        public Reservation getBookingById(String reservationId) {
+            for (Reservation booking : confirmedBookings) {
+                if (booking.getReservationId().equals(reservationId)) {
+                    return booking;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * UC8: Get total number of confirmed bookings
+         *
+         * @return Count of bookings
+         */
+        public int getTotalBookingCount() {
+            return confirmedBookings.size();
+        }
+
+        /**
+         * UC8: Display complete booking history
+         * Time Complexity: O(n)
+         */
+        public void displayCompleteHistory() {
             System.out.println("\n========================================");
-            System.out.println("    SERVICE STATISTICS                  ");
+            System.out.println("    COMPLETE BOOKING HISTORY            ");
+            System.out.println("========================================");
+            System.out.println("\nTotal Confirmed Bookings: " + confirmedBookings.size());
+
+            if (confirmedBookings.isEmpty()) {
+                System.out.println("No bookings in history yet.");
+                System.out.println("\n========================================");
+                return;
+            }
+
+            System.out.println("\nBooking Records (Insertion Order):\n");
+
+            int position = 1;
+            for (Reservation booking : confirmedBookings) {
+                System.out.println("  " + position + ". " + booking);
+                position++;
+            }
+
+            System.out.println("\n========================================");
+        }
+
+        /**
+         * UC8: Display booking details by ID
+         *
+         * @param reservationId Reservation ID
+         */
+        public void displayBookingDetails(String reservationId) {
+            Reservation booking = getBookingById(reservationId);
+
+            if (booking == null) {
+                System.out.println("✗ Booking not found: " + reservationId);
+                return;
+            }
+
+            System.out.println("\n========================================");
+            System.out.println("    BOOKING DETAILS                     ");
+            System.out.println("========================================");
+            booking.displayDetails();
+            System.out.println("========================================");
+        }
+    }
+
+    // ============================================
+    // UC8: BOOKING REPORT SERVICE CLASS (NEW)
+    // ============================================
+
+    /**
+     * UC8: BookingReportService class - Generates reports from booking history
+     *
+     * Provides read-only analysis and reporting capabilities.
+     * Separates reporting logic from data storage.
+     * Enables operational visibility without modifying historical data.
+     */
+    static class BookingReportService {
+
+        private BookingHistory bookingHistory;
+        private RoomInventory inventory;
+        private Map<String, Room> roomCatalog;
+
+        /**
+         * UC8: Constructor - Initialize report service
+         *
+         * @param history BookingHistory instance
+         * @param inv RoomInventory instance
+         */
+        public BookingReportService(BookingHistory history, RoomInventory inv) {
+            this.bookingHistory = history;
+            this.inventory = inv;
+            this.roomCatalog = new HashMap<>();
+
+            // Initialize room catalog
+            roomCatalog.put("Single Room", new SingleRoom());
+            roomCatalog.put("Double Room", new DoubleRoom());
+            roomCatalog.put("Suite Room", new SuiteRoom());
+        }
+
+        /**
+         * UC8: Generate summary report
+         * Time Complexity: O(n)
+         */
+        public void generateSummaryReport() {
+            System.out.println("\n========================================");
+            System.out.println("    BOOKING SUMMARY REPORT              ");
             System.out.println("========================================");
 
-            System.out.println("\nTotal Services in Catalog: " + serviceCatalog.size());
-            System.out.println("Total Reservations with Services: " +
-                    reservationServices.size());
+            List<Reservation> bookings = bookingHistory.getAllBookings();
 
-            int totalServiceSelections = 0;
-            for (List<AddOnService> services : reservationServices.values()) {
-                totalServiceSelections += services.size();
+            if (bookings.isEmpty()) {
+                System.out.println("\nNo bookings to report.");
+                System.out.println("\n========================================");
+                return;
             }
 
-            System.out.println("Total Service Selections: " + totalServiceSelections);
+            double totalRevenue = 0;
+            int totalNights = 0;
+            int totalGuests = bookings.size();
 
-            if (totalServiceSelections > 0) {
-                double avgServicesPerReservation =
-                        (double) totalServiceSelections / reservationServices.size();
-                System.out.println("Avg Services per Reservation: " +
-                        String.format("%.2f", avgServicesPerReservation));
+            Map<String, Integer> bookingsByType = new HashMap<>();
+
+            for (Reservation booking : bookings) {
+                totalRevenue += booking.getTotalCost();
+                totalNights += booking.getNumberOfNights();
+
+                String roomType = booking.getRequestedRoomType();
+                bookingsByType.put(roomType, bookingsByType.getOrDefault(roomType, 0) + 1);
+            }
+
+            System.out.println("\nBooking Overview:");
+            System.out.println("  Total Bookings: " + totalGuests);
+            System.out.println("  Total Revenue: ₹" + String.format("%.2f", totalRevenue));
+            System.out.println("  Total Nights: " + totalNights);
+            System.out.println("  Average Revenue per Booking: ₹" +
+                    String.format("%.2f", totalRevenue / totalGuests));
+
+            System.out.println("\nBookings by Room Type:");
+            for (Map.Entry<String, Integer> entry : bookingsByType.entrySet()) {
+                System.out.println("  " + entry.getKey() + ": " + entry.getValue());
             }
 
             System.out.println("\n========================================");
+        }
+
+        /**
+         * UC8: Generate revenue report
+         */
+        public void generateRevenueReport() {
+            System.out.println("\n========================================");
+            System.out.println("    REVENUE ANALYSIS REPORT             ");
+            System.out.println("========================================");
+
+            List<Reservation> bookings = bookingHistory.getAllBookings();
+
+            double totalRevenue = 0;
+            double maxRevenue = 0;
+            double minRevenue = Double.MAX_VALUE;
+
+            Map<String, Double> revenueByType = new HashMap<>();
+
+            for (Reservation booking : bookings) {
+                double cost = booking.getTotalCost();
+                totalRevenue += cost;
+                maxRevenue = Math.max(maxRevenue, cost);
+                minRevenue = Math.min(minRevenue, cost);
+
+                String roomType = booking.getRequestedRoomType();
+                revenueByType.put(roomType,
+                        revenueByType.getOrDefault(roomType, 0.0) + cost);
+            }
+
+            System.out.println("\nRevenue Summary:");
+            System.out.println("  Total Revenue: ₹" + String.format("%.2f", totalRevenue));
+            System.out.println("  Highest Booking: ₹" + String.format("%.2f", maxRevenue));
+            System.out.println("  Lowest Booking: ₹" + String.format("%.2f", minRevenue));
+
+            if (!bookings.isEmpty()) {
+                System.out.println("  Average Booking: ₹" +
+                        String.format("%.2f", totalRevenue / bookings.size()));
+            }
+
+            System.out.println("\nRevenue by Room Type:");
+            for (Map.Entry<String, Double> entry : revenueByType.entrySet()) {
+                System.out.println("  " + entry.getKey() + ": ₹" +
+                        String.format("%.2f", entry.getValue()));
+            }
+
+            System.out.println("\n========================================");
+        }
+
+        /**
+         * UC8: Generate occupancy report
+         */
+        public void generateOccupancyReport() {
+            System.out.println("\n========================================");
+            System.out.println("    OCCUPANCY REPORT                    ");
+            System.out.println("========================================");
+
+            System.out.println("\nCurrent Room Status:");
+
+            for (String roomType : new String[]{"Single Room", "Double Room", "Suite Room"}) {
+                int available = inventory.getAvailableRooms(roomType);
+                int total = inventory.getTotalRooms(roomType);
+                int booked = total - available;
+
+                double occupancyRate = (booked * 100.0) / total;
+
+                System.out.println("\n" + roomType + ":");
+                System.out.println("  Available: " + available + " / " + total);
+                System.out.println("  Booked: " + booked);
+                System.out.println("  Occupancy Rate: " +
+                        String.format("%.1f%%", occupancyRate));
+            }
+
+            System.out.println("\n========================================");
+        }
+
+        /**
+         * UC8: Generate guest list report
+         */
+        public void generateGuestListReport() {
+            System.out.println("\n========================================");
+            System.out.println("    GUEST LIST REPORT                   ");
+            System.out.println("========================================");
+
+            List<Reservation> bookings = bookingHistory.getAllBookings();
+
+            System.out.println("\nGuest Bookings:\n");
+
+            int position = 1;
+            for (Reservation booking : bookings) {
+                System.out.println("  " + position + ". " + booking.getGuestName());
+                System.out.println("     Reservation: " + booking.getReservationId());
+                System.out.println("     Room: " + booking.getAssignedRoomId() +
+                        " (" + booking.getRequestedRoomType() + ")");
+                System.out.println("     Nights: " + booking.getNumberOfNights());
+                System.out.println("     Cost: ₹" + booking.getTotalCost());
+                System.out.println();
+
+                position++;
+            }
+
+            System.out.println("========================================");
         }
     }
 
@@ -934,35 +832,32 @@ public class BookMyStay {
     // DISPLAY METHODS
     // ============================================
 
-    /**
-     * Display welcome message
-     */
     public static void displayWelcomeMessage() {
         System.out.println("\n========================================");
         System.out.println("    BOOK MY STAY - HOTEL BOOKING APP    ");
         System.out.println("========================================");
-        System.out.println("Version: 7.1");
-        System.out.println("Use Case 7: Add-On Service Selection");
+        System.out.println("Version: 8.1");
+        System.out.println("Use Case 8: Booking History & Reporting");
         System.out.println("========================================\n");
     }
 
     /**
-     * UC7: Demonstrate add-on service selection
+     * UC8: Demonstrate booking history and reporting
      */
-    public static void demonstrateAddOnServices(BookingRequestQueue requestQueue,
-                                                RoomInventory inventory,
-                                                RoomAllocationService allocationService,
-                                                AddOnServiceManager serviceManager) {
+    public static void demonstrateHistoryAndReporting(
+            BookingRequestQueue requestQueue,
+            RoomInventory inventory,
+            RoomAllocationService allocationService,
+            AddOnServiceManager serviceManager,
+            BookingHistory bookingHistory,
+            BookingReportService reportService) {
+
         System.out.println("\n========================================");
-        System.out.println("    ADD-ON SERVICE DEMONSTRATION        ");
+        System.out.println("    HISTORY & REPORTING DEMONSTRATION   ");
         System.out.println("========================================");
 
-        // Scenario 1: Display available services
-        System.out.println("\n--- SCENARIO 1: Display available services ---");
-        serviceManager.displayAllServices();
-
-        // Scenario 2: Create and allocate reservations
-        System.out.println("\n--- SCENARIO 2: Create and allocate reservations ---\n");
+        // Scenario 1: Create and confirm bookings
+        System.out.println("\n--- SCENARIO 1: Create and confirm multiple bookings ---\n");
 
         Reservation res1 = requestQueue.addBookingRequest("Rajesh Kumar",
                 "Single Room", 3);
@@ -970,71 +865,52 @@ public class BookMyStay {
                 "Double Room", 2);
         Reservation res3 = requestQueue.addBookingRequest("Amit Patel",
                 "Suite Room", 4);
+        Reservation res4 = requestQueue.addBookingRequest("Neha Singh",
+                "Single Room", 2);
 
+        // Allocate rooms
         allocationService.allocateRoom(res1, inventory);
         allocationService.allocateRoom(res2, inventory);
         allocationService.allocateRoom(res3, inventory);
+        allocationService.allocateRoom(res4, inventory);
 
-        System.out.println("✓ 3 reservations allocated\n");
+        // Calculate and set costs
+        res1.setTotalCost(2000 * 3 + 500 + 400); // Room + Breakfast + Airport
+        res2.setTotalCost(3500 * 2 + 1500 + 2000); // Room + Dinner + Spa
+        res3.setTotalCost(6000 * 4 + 500); // Room + Late Checkout
+        res4.setTotalCost(2000 * 2); // Room only
 
-        // Scenario 3: Add services to reservations
-        System.out.println("--- SCENARIO 3: Add services to reservations ---\n");
+        // UC8: Record bookings in history (NEW)
+        System.out.println("\n--- SCENARIO 2: Record confirmed bookings in history ---\n");
 
-        System.out.println("Adding services for Rajesh Kumar:");
-        serviceManager.addServiceToReservation("RES-1001", "SVC-101");
-        System.out.println("✓ Continental Breakfast added");
-        serviceManager.addServiceToReservation("RES-1001", "SVC-201");
-        System.out.println("✓ Airport Transfer added");
+        bookingHistory.recordConfirmedBooking(res1);
+        bookingHistory.recordConfirmedBooking(res2);
+        bookingHistory.recordConfirmedBooking(res3);
+        bookingHistory.recordConfirmedBooking(res4);
 
-        System.out.println("\nAdding services for Priya Sharma:");
-        serviceManager.addServiceToReservation("RES-1002", "SVC-102");
-        System.out.println("✓ Evening Dinner added");
-        serviceManager.addServiceToReservation("RES-1002", "SVC-301");
-        System.out.println("✓ Spa Treatment added");
-        serviceManager.addServiceToReservation("RES-1002", "SVC-401");
-        System.out.println("✓ Late Checkout added");
+        System.out.println("\n✓ " + bookingHistory.getTotalBookingCount() +
+                " bookings recorded in history");
 
-        System.out.println("\nAdding services for Amit Patel:");
-        serviceManager.addServiceToReservation("RES-1003", "SVC-202");
-        System.out.println("✓ City Tour added");
+        // UC8: Display complete history
+        System.out.println("\n--- SCENARIO 3: Display complete booking history ---");
+        bookingHistory.displayCompleteHistory();
 
-        // Scenario 4: Display reservation details with services
-        System.out.println("\n--- SCENARIO 4: Reservation details with services ---");
+        // UC8: Display specific booking details
+        System.out.println("\n--- SCENARIO 4: Look up specific booking ---");
+        bookingHistory.displayBookingDetails("RES-1001");
 
-        serviceManager.displayReservationServices("RES-1001", "Rajesh Kumar");
-        serviceManager.displayReservationServices("RES-1002", "Priya Sharma");
-        serviceManager.displayReservationServices("RES-1003", "Amit Patel");
-
-        // Scenario 5: Calculate costs
-        System.out.println("\n--- SCENARIO 5: Cost calculation ---\n");
-
-        double cost1 = serviceManager.calculateTotalBookingCost(2000, 3, "RES-1001");
-        System.out.println("Total cost for Rajesh Kumar: ₹" + cost1);
-        System.out.println("  (Room: ₹6000 + Services: ₹" +
-                serviceManager.calculateAddOnCost("RES-1001") + ")");
-
-        double cost2 = serviceManager.calculateTotalBookingCost(3500, 2, "RES-1002");
-        System.out.println("\nTotal cost for Priya Sharma: ₹" + cost2);
-        System.out.println("  (Room: ₹7000 + Services: ₹" +
-                serviceManager.calculateAddOnCost("RES-1002") + ")");
-
-        double cost3 = serviceManager.calculateTotalBookingCost(6000, 4, "RES-1003");
-        System.out.println("\nTotal cost for Amit Patel: ₹" + cost3);
-        System.out.println("  (Room: ₹24000 + Services: ₹" +
-                serviceManager.calculateAddOnCost("RES-1003") + ")");
-
-        // Scenario 6: Statistics
-        System.out.println("\n--- SCENARIO 6: Service statistics ---");
-        serviceManager.displayServiceStatistics();
+        // UC8: Generate reports
+        System.out.println("\n--- SCENARIO 5: Generate reports ---");
+        reportService.generateSummaryReport();
+        reportService.generateRevenueReport();
+        reportService.generateOccupancyReport();
+        reportService.generateGuestListReport();
     }
 
     // ============================================
     // MAIN METHOD
     // ============================================
 
-    /**
-     * Main method - Entry point of UC7
-     */
     public static void main(String[] args) {
         displayWelcomeMessage();
 
@@ -1048,54 +924,62 @@ public class BookMyStay {
 
         RoomAllocationService allocationService = new RoomAllocationService();
 
-        // UC7: Initialize service manager (NEW)
-        System.out.println("\n--- STEP 2: Initialize Add-On Service Manager ---");
         AddOnServiceManager serviceManager = new AddOnServiceManager();
-        System.out.println("✓ Service manager initialized!");
-        System.out.println("  Data Structure: Map<String, List<AddOnService>>");
-        System.out.println("  Pattern: Composition over Inheritance");
 
-        // UC7: Demonstrate add-on services
-        System.out.println("\n--- STEP 3: Demonstrate Add-On Services ---");
-        demonstrateAddOnServices(requestQueue, inventory, allocationService,
-                serviceManager);
+        // UC8: Initialize booking history and report service (NEW)
+        System.out.println("\n--- STEP 2: Initialize Booking History & Reporting ---");
+        BookingHistory bookingHistory = new BookingHistory();
+        System.out.println("✓ Booking history initialized!");
+        System.out.println("  Data Structure: List<Reservation>");
+        System.out.println("  Maintains: Insertion order (chronological)");
+
+        BookingReportService reportService = new BookingReportService(inventory,
+                bookingHistory);
+        System.out.println("✓ Report service initialized!");
+        System.out.println("  Reports Available: Summary, Revenue, Occupancy, Guest List");
+
+        // UC8: Demonstrate history and reporting
+        System.out.println("\n--- STEP 3: Demonstrate History & Reporting ---");
+        demonstrateHistoryAndReporting(requestQueue, inventory, allocationService,
+                serviceManager, bookingHistory, reportService);
 
         // Final message
         System.out.println("\n========================================");
-        System.out.println("UC7 Demonstration Complete!");
-        System.out.println("Add-on service selection established.");
-        System.out.println("Extensibility without modifying core logic verified.");
-        System.out.println("Ready for advanced features in UC8+...");
+        System.out.println("UC8 Demonstration Complete!");
+        System.out.println("Booking history and reporting established.");
+        System.out.println("Operational visibility and audit trail verified.");
+        System.out.println("Ready for advanced features and persistence in UC9+...");
         System.out.println("========================================\n");
 
-        // Display UC7 advantages
+        // Display UC8 advantages
         System.out.println("========================================");
-        System.out.println("    UC7 ADVANTAGES - BUSINESS EXTENSION ");
+        System.out.println("    UC8 ADVANTAGES - HISTORY & REPORTS  ");
         System.out.println("========================================");
-        System.out.println("\n✓ Map<String, List<>> for one-to-many relationships");
-        System.out.println("✓ Composition over inheritance pattern");
-        System.out.println("✓ Separation of core and optional features");
-        System.out.println("✓ Easy to add new services");
-        System.out.println("✓ Core booking logic remains unchanged");
-        System.out.println("✓ Independent service cost calculation");
-        System.out.println("✓ Flexible feature attachment");
-        System.out.println("✓ Business extensibility demonstrated");
+        System.out.println("\n✓ List<Reservation> maintains chronological order");
+        System.out.println("✓ O(1) append for recording confirmations");
+        System.out.println("✓ Read-only audit trail");
+        System.out.println("✓ Separated reporting from storage");
+        System.out.println("✓ Operational visibility enabled");
+        System.out.println("✓ Historical tracking for compliance");
+        System.out.println("✓ Admin oversight and analysis");
+        System.out.println("✓ Persistence mindset established");
         System.out.println("\n========================================\n");
 
         // Display data structure benefits
         System.out.println("========================================");
-        System.out.println("    WHY MAP + LIST FOR SERVICES?       ");
+        System.out.println("    WHY LIST FOR BOOKING HISTORY?      ");
         System.out.println("========================================");
-        System.out.println("\nOne-to-Many Relationship Modeling:\n");
-        System.out.println("Reservation ──────┬──── Service 1");
-        System.out.println("                  ├──── Service 2");
-        System.out.println("                  └──── Service 3");
-        System.out.println("\nData Structure Benefits:");
-        System.out.println("✓ Map: Fast reservation lookup - O(1)");
-        System.out.println("✓ List: Preserves insertion order");
-        System.out.println("✓ Combination: Perfect for this pattern");
-        System.out.println("✓ Flexibility: Easy to extend with new services");
-        System.out.println("✓ Isolation: Services don't affect core booking");
+        System.out.println("\nHistorical Record Requirements:\n");
+        System.out.println("✓ Ordered Storage: Chronological record");
+        System.out.println("✓ Fast Insertion: O(1) append operation");
+        System.out.println("✓ Sequential Access: Natural reporting");
+        System.out.println("✓ Audit Trail: Complete transaction history");
+        System.out.println("✓ Scalability: Grows with bookings");
+        System.out.println("✓ Immutability: Read-only for reporting");
+        System.out.println("\nBetter than alternatives:");
+        System.out.println("  Queue: Would lose old entries");
+        System.out.println("  Set: No order or duplicates");
+        System.out.println("  Map: Not suitable for sequences");
         System.out.println("\n========================================\n");
     }
 }
