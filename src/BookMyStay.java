@@ -1,20 +1,20 @@
 import java.util.*;
 
 /**
- * Hotel Booking Management System - Use Case 5
+ * Hotel Booking Management System - Use Case 6
  *
- * Booking Request (First-Come-First-Served)
+ * Reservation Confirmation & Room Allocation
  *
  * This class demonstrates:
- * - Queue data structure for fair request ordering
- * - FIFO (First-Come-First-Served) principle
- * - Reservation model for booking intent
- * - Request intake without inventory mutation
- * - Fairness in booking allocation
- * - Decoupling request intake from allocation
+ * - Set data structure for enforcing room ID uniqueness
+ * - Prevention of double-booking through unique room assignment
+ * - Atomic logical operations for booking and inventory updates
+ * - Mapping room types to allocated rooms
+ * - Inventory synchronization after allocation
+ * - Safe room allocation patterns
  *
  * @author sumanth-batna29
- * @version 5.1
+ * @version 6.1
  * @since 2026-03-25
  */
 public class BookMyStay {
@@ -194,14 +194,14 @@ public class BookMyStay {
     }
 
     // ============================================
-    // UC5: RESERVATION CLASS (NEW)
+    // RESERVATION CLASS
     // ============================================
 
     /**
-     * UC5: Reservation class - Represents a guest's booking intent
+     * Reservation class - Represents a guest's booking intent
      *
      * Encapsulates all information related to a booking request.
-     * Contains guest details, room preference, and timestamps for ordering.
+     * Contains guest details, room preference, and booking confirmation.
      */
     static class Reservation {
 
@@ -210,10 +210,11 @@ public class BookMyStay {
         private String requestedRoomType;
         private int numberOfNights;
         private long requestTimestamp;
-        private String status; // "Pending", "Approved", "Rejected"
+        private String status; // "Pending", "Confirmed", "Rejected"
+        private String assignedRoomId; // UC6: Assigned room ID
 
         /**
-         * UC5: Constructor - Create a new reservation
+         * Constructor - Create a new reservation
          *
          * @param reservationId Unique reservation ID
          * @param guestName Name of the guest
@@ -228,10 +229,11 @@ public class BookMyStay {
             this.numberOfNights = numberOfNights;
             this.requestTimestamp = System.currentTimeMillis();
             this.status = "Pending";
+            this.assignedRoomId = null;
         }
 
         /**
-         * UC5: Get reservation ID
+         * Get reservation ID
          * @return reservation ID
          */
         public String getReservationId() {
@@ -239,7 +241,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC5: Get guest name
+         * Get guest name
          * @return guest name
          */
         public String getGuestName() {
@@ -247,7 +249,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC5: Get requested room type
+         * Get requested room type
          * @return room type
          */
         public String getRequestedRoomType() {
@@ -255,7 +257,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC5: Get number of nights
+         * Get number of nights
          * @return number of nights
          */
         public int getNumberOfNights() {
@@ -263,7 +265,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC5: Get request timestamp
+         * Get request timestamp
          * @return timestamp in milliseconds
          */
         public long getRequestTimestamp() {
@@ -271,7 +273,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC5: Get reservation status
+         * Get reservation status
          * @return current status
          */
         public String getStatus() {
@@ -279,7 +281,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC5: Set reservation status
+         * Set reservation status
          * @param status New status
          */
         public void setStatus(String status) {
@@ -287,7 +289,23 @@ public class BookMyStay {
         }
 
         /**
-         * UC5: Display reservation details
+         * UC6: Get assigned room ID
+         * @return assigned room ID or null if not assigned
+         */
+        public String getAssignedRoomId() {
+            return assignedRoomId;
+        }
+
+        /**
+         * UC6: Set assigned room ID
+         * @param roomId Room ID to assign
+         */
+        public void setAssignedRoomId(String roomId) {
+            this.assignedRoomId = roomId;
+        }
+
+        /**
+         * Display reservation details
          */
         public void displayDetails() {
             System.out.println("Reservation ID: " + reservationId);
@@ -295,13 +313,18 @@ public class BookMyStay {
             System.out.println("Room Type: " + requestedRoomType);
             System.out.println("Number of Nights: " + numberOfNights);
             System.out.println("Status: " + status);
+            if (assignedRoomId != null) {
+                System.out.println("Assigned Room: " + assignedRoomId);
+            }
         }
 
         @Override
         public String toString() {
+            String roomInfo = (assignedRoomId != null) ?
+                    " [Room: " + assignedRoomId + "]" : "";
             return "[" + reservationId + "] " + guestName +
                     " - " + requestedRoomType +
-                    " (" + numberOfNights + " nights) - " + status;
+                    " (" + numberOfNights + " nights) - " + status + roomInfo;
         }
     }
 
@@ -385,13 +408,13 @@ public class BookMyStay {
         }
 
         /**
-         * Book a room (decrement availability)
+         * UC6: Decrement room availability (atomic operation)
          * Time Complexity: O(1)
          *
-         * @param roomType Type of room to book
-         * @return true if booking successful, false if no rooms available
+         * @param roomType Type of room to decrement
+         * @return true if decrement successful, false if no rooms available
          */
-        public boolean bookRoom(String roomType) {
+        public boolean decrementRoomCount(String roomType) {
             if (!roomTypeExists(roomType)) {
                 return false;
             }
@@ -450,11 +473,11 @@ public class BookMyStay {
     }
 
     // ============================================
-    // UC5: BOOKING REQUEST QUEUE CLASS (NEW)
+    // BOOKING REQUEST QUEUE CLASS
     // ============================================
 
     /**
-     * UC5: BookingRequestQueue class - FIFO booking request management
+     * BookingRequestQueue class - FIFO booking request management
      *
      * Manages incoming booking requests using a Queue data structure.
      * Implements FIFO (First-Come-First-Served) principle for fairness.
@@ -462,24 +485,23 @@ public class BookMyStay {
      */
     static class BookingRequestQueue {
 
-        // UC5: Queue for managing booking requests in FIFO order
+        // Queue for managing booking requests in FIFO order
         private Queue<Reservation> requestQueue;
 
         // Counter for generating unique reservation IDs
         private int reservationCounter;
 
         /**
-         * UC5: Constructor - Initialize booking request queue
+         * Constructor - Initialize booking request queue
          */
         public BookingRequestQueue() {
-            // UC5: LinkedList implements Queue interface
             this.requestQueue = new LinkedList<>();
             this.reservationCounter = 1000;
         }
 
         /**
-         * UC5: Add a booking request to the queue
-         * Time Complexity: O(1) - LinkedList offer operation
+         * Add a booking request to the queue
+         * Time Complexity: O(1)
          * FIFO Principle: Request is added at the end
          *
          * @param guestName Name of the guest
@@ -490,26 +512,16 @@ public class BookMyStay {
         public Reservation addBookingRequest(String guestName,
                                              String requestedRoomType,
                                              int numberOfNights) {
-            // UC5: Generate unique reservation ID
             String reservationId = "RES-" + (++reservationCounter);
-
-            // UC5: Create new reservation
             Reservation reservation = new Reservation(reservationId, guestName,
                     requestedRoomType, numberOfNights);
-
-            // UC5: Add to queue (FIFO - added at end)
-            requestQueue.offer(reservation);  // or add()
-
-            System.out.println("✓ Booking request added: " + reservationId);
-            System.out.println("  Queue size: " + requestQueue.size());
-
+            requestQueue.offer(reservation);
             return reservation;
         }
 
         /**
-         * UC5: Get the next booking request from queue (peek without removing)
+         * Get the next booking request from queue (peek without removing)
          * Time Complexity: O(1)
-         * FIFO Principle: Returns the first request (head of queue)
          *
          * @return Next Reservation to process, or null if queue is empty
          */
@@ -518,9 +530,8 @@ public class BookMyStay {
         }
 
         /**
-         * UC5: Remove and return the next booking request from queue
+         * Remove and return the next booking request from queue
          * Time Complexity: O(1)
-         * FIFO Principle: Removes and returns the first request
          *
          * @return Next Reservation to process, or null if queue is empty
          */
@@ -529,7 +540,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC5: Check if queue has pending requests
+         * Check if queue has pending requests
          *
          * @return true if queue is not empty, false otherwise
          */
@@ -538,8 +549,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC5: Get number of pending requests in queue
-         * Time Complexity: O(1)
+         * Get number of pending requests in queue
          *
          * @return Number of requests waiting in queue
          */
@@ -548,8 +558,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC5: Display all pending booking requests in queue order
-         * Time Complexity: O(n) where n = number of requests
+         * Display all pending booking requests in queue order
          */
         public void displayPendingRequests() {
             System.out.println("\n========================================");
@@ -557,7 +566,6 @@ public class BookMyStay {
             System.out.println("========================================");
             System.out.println("\nTotal Pending Requests: " + requestQueue.size());
 
-            // UC5: Defensive check - handle empty queue
             if (requestQueue.isEmpty()) {
                 System.out.println("\n✓ Queue is empty - no pending requests");
                 System.out.println("\n========================================");
@@ -566,8 +574,6 @@ public class BookMyStay {
 
             System.out.println("\nRequests in order (FIFO):\n");
 
-            // UC5: Display requests in queue order
-            // Note: We iterate through a copy to preserve queue
             Queue<Reservation> tempQueue = new LinkedList<>(requestQueue);
             int position = 1;
 
@@ -579,87 +585,243 @@ public class BookMyStay {
 
             System.out.println("\n========================================");
         }
+    }
+
+    // ============================================
+    // UC6: ROOM ALLOCATION SERVICE CLASS (NEW)
+    // ============================================
+
+    /**
+     * UC6: RoomAllocationService class - Safe room allocation with double-booking prevention
+     *
+     * Manages room allocation process with uniqueness enforcement.
+     * Uses Set data structure to prevent double-booking.
+     * Maps room types to allocated room IDs.
+     * Maintains consistency between allocation and inventory.
+     */
+    static class RoomAllocationService {
+
+        // UC6: Set to track all allocated room IDs (enforces uniqueness)
+        private Set<String> allocatedRoomIds;
+
+        // UC6: HashMap to map room types to their allocated room IDs
+        private HashMap<String, Set<String>> roomTypeToAllocatedIds;
+
+        // Counter for generating unique room IDs
+        private HashMap<String, Integer> roomIdCounters;
 
         /**
-         * UC5: Display queue statistics
+         * UC6: Constructor - Initialize allocation service
          */
-        public void displayQueueStatistics() {
-            System.out.println("\n========================================");
-            System.out.println("    QUEUE STATISTICS                    ");
-            System.out.println("========================================");
+        public RoomAllocationService() {
+            // UC6: HashSet enforces uniqueness of room IDs
+            this.allocatedRoomIds = new HashSet<>();
 
-            System.out.println("\nTotal Requests in Queue: " + requestQueue.size());
-            System.out.println("Queue Status: " +
-                    (requestQueue.isEmpty() ? "Empty" : "Active"));
+            // UC6: HashMap maps each room type to its allocated IDs (Set)
+            this.roomTypeToAllocatedIds = new HashMap<>();
 
-            // Count requests by room type
-            Map<String, Integer> roomTypeCount = new HashMap<>();
-            for (Reservation res : requestQueue) {
-                String roomType = res.getRequestedRoomType();
-                roomTypeCount.put(roomType, roomTypeCount.getOrDefault(roomType, 0) + 1);
-            }
+            // Initialize counters for room ID generation
+            this.roomIdCounters = new HashMap<>();
 
-            System.out.println("\nRequests by Room Type:");
-            for (Map.Entry<String, Integer> entry : roomTypeCount.entrySet()) {
-                System.out.println("  " + entry.getKey() + ": " + entry.getValue());
-            }
-
-            System.out.println("\n========================================");
+            initializeAllocationService();
         }
 
         /**
-         * UC5: Process first booking request from queue
-         * Demonstrates FIFO allocation principle
-         *
-         * @param inventory RoomInventory for booking allocation
-         * @return true if booking was successful, false otherwise
+         * UC6: Initialize allocation service with room types
          */
-        public boolean processNextBooking(RoomInventory inventory) {
-            // UC5: Peek at next request without removing
-            Reservation nextRequest = peekNextRequest();
+        private void initializeAllocationService() {
+            System.out.println("Initializing room allocation service...");
 
-            if (nextRequest == null) {
-                System.out.println("✗ No requests to process - queue is empty");
+            // UC6: Create Set for each room type to store allocated room IDs
+            roomTypeToAllocatedIds.put("Single Room", new HashSet<>());
+            roomTypeToAllocatedIds.put("Double Room", new HashSet<>());
+            roomTypeToAllocatedIds.put("Suite Room", new HashSet<>());
+
+            // Initialize ID counters
+            roomIdCounters.put("Single Room", 1);
+            roomIdCounters.put("Double Room", 1);
+            roomIdCounters.put("Suite Room", 1);
+
+            System.out.println("✓ Allocation service initialized successfully!");
+        }
+
+        /**
+         * UC6: Generate unique room ID for a room type
+         * Ensures no ID reuse across all allocations
+         * Time Complexity: O(1)
+         *
+         * @param roomType Type of room
+         * @return Unique room ID
+         */
+        private String generateUniqueRoomId(String roomType) {
+            // UC6: Generate ID based on room type and counter
+            int counter = roomIdCounters.getOrDefault(roomType, 1);
+            String roomId = roomType.substring(0, 1) + counter;  // S1, D1, SU1, etc.
+
+            // UC6: Increment counter for next ID generation
+            roomIdCounters.put(roomType, counter + 1);
+
+            return roomId;
+        }
+
+        /**
+         * UC6: Check if room ID already allocated
+         * Prevents double-booking by checking uniqueness
+         * Time Complexity: O(1)
+         *
+         * @param roomId Room ID to check
+         * @return true if room ID already allocated, false otherwise
+         */
+        private boolean isRoomIdAllocated(String roomId) {
+            // UC6: Set.contains() provides O(1) lookup
+            return allocatedRoomIds.contains(roomId);
+        }
+
+        /**
+         * UC6: Allocate room to reservation
+         * Atomic operation: generate ID, verify uniqueness, record allocation, confirm
+         * Time Complexity: O(1)
+         *
+         * @param reservation Reservation to allocate room for
+         * @param inventory RoomInventory for inventory updates
+         * @return true if allocation successful, false otherwise
+         */
+        public boolean allocateRoom(Reservation reservation, RoomInventory inventory) {
+            String roomType = reservation.getRequestedRoomType();
+
+            // UC6: Step 1: Check if room type exists
+            if (!inventory.roomTypeExists(roomType)) {
+                System.out.println("✗ ERROR: Room type '" + roomType + "' not found!");
                 return false;
             }
 
-            System.out.println("\nProcessing booking request: " + nextRequest.getReservationId());
-
-            // UC5: Check if room is available
-            String requestedRoom = nextRequest.getRequestedRoomType();
-            if (inventory.getAvailableRooms(requestedRoom) > 0) {
-                // UC5: Book the room
-                if (inventory.bookRoom(requestedRoom)) {
-                    // UC5: Update reservation status
-                    nextRequest.setStatus("Approved");
-
-                    // UC5: Remove from queue (FIFO processing)
-                    pollNextRequest();
-
-                    System.out.println("✓ Booking approved!");
-                    System.out.println("  Reservation: " + nextRequest.getReservationId());
-                    System.out.println("  Guest: " + nextRequest.getGuestName());
-                    System.out.println("  Room: " + requestedRoom);
-                    System.out.println("  Remaining queue: " + requestQueue.size());
-
-                    return true;
-                }
-            } else {
-                System.out.println("✗ No " + requestedRoom + " available");
-                System.out.println("  Request remains in queue");
+            // UC6: Step 2: Check inventory availability
+            if (inventory.getAvailableRooms(roomType) <= 0) {
+                System.out.println("✗ No " + roomType + " available!");
+                return false;
             }
 
-            return false;
+            // UC6: Step 3: Generate unique room ID
+            String assignedRoomId = generateUniqueRoomId(roomType);
+
+            // UC6: Step 4: Verify room ID is not already allocated (uniqueness check)
+            if (isRoomIdAllocated(assignedRoomId)) {
+                System.out.println("✗ ERROR: Room ID collision detected for: " + assignedRoomId);
+                System.out.println("  This should NEVER happen - double-booking prevented!");
+                return false;
+            }
+
+            // UC6: Step 5: Record allocation in global set (mark as allocated)
+            allocatedRoomIds.add(assignedRoomId);
+
+            // UC6: Step 6: Record allocation in room type map
+            Set<String> roomTypeAllocations = roomTypeToAllocatedIds.get(roomType);
+            roomTypeAllocations.add(assignedRoomId);
+
+            // UC6: Step 7: Update inventory immediately (atomic with allocation)
+            if (!inventory.decrementRoomCount(roomType)) {
+                // UC6: Rollback if inventory update fails
+                allocatedRoomIds.remove(assignedRoomId);
+                roomTypeAllocations.remove(assignedRoomId);
+                System.out.println("✗ ERROR: Failed to update inventory!");
+                return false;
+            }
+
+            // UC6: Step 8: Update reservation with allocated room
+            reservation.setAssignedRoomId(assignedRoomId);
+            reservation.setStatus("Confirmed");
+
+            return true;
         }
 
         /**
-         * UC5: Clear all pending requests from queue
-         * Use with caution
+         * UC6: Check if room is already allocated
+         *
+         * @param roomId Room ID to check
+         * @return true if room is allocated, false otherwise
          */
-        public void clearQueue() {
-            int clearedCount = requestQueue.size();
-            requestQueue.clear();
-            System.out.println("✓ Queue cleared - " + clearedCount + " requests removed");
+        public boolean isRoomAllocated(String roomId) {
+            return allocatedRoomIds.contains(roomId);
+        }
+
+        /**
+         * UC6: Get count of allocated room IDs (for statistics)
+         *
+         * @return Number of allocated rooms
+         */
+        public int getAllocatedRoomCount() {
+            return allocatedRoomIds.size();
+        }
+
+        /**
+         * UC6: Get allocated room IDs for a specific room type
+         *
+         * @param roomType Type of room
+         * @return Set of allocated room IDs for this type
+         */
+        public Set<String> getAllocatedRoomIds(String roomType) {
+            return roomTypeToAllocatedIds.getOrDefault(roomType, new HashSet<>());
+        }
+
+        /**
+         * UC6: Display all allocated rooms
+         */
+        public void displayAllocatedRooms() {
+            System.out.println("\n========================================");
+            System.out.println("    ALLOCATED ROOMS (Set Uniqueness)    ");
+            System.out.println("========================================");
+            System.out.println("\nTotal Allocated Room IDs: " + allocatedRoomIds.size());
+            System.out.println("All Allocated IDs: " + allocatedRoomIds);
+
+            System.out.println("\nAllocations by Room Type:\n");
+
+            for (Map.Entry<String, Set<String>> entry : roomTypeToAllocatedIds.entrySet()) {
+                String roomType = entry.getKey();
+                Set<String> allocatedIds = entry.getValue();
+
+                System.out.println("  " + roomType + ":");
+                if (allocatedIds.isEmpty()) {
+                    System.out.println("    No allocations yet");
+                } else {
+                    System.out.println("    Allocated IDs: " + allocatedIds);
+                }
+            }
+
+            System.out.println("\n========================================");
+        }
+
+        /**
+         * UC6: Display allocation statistics
+         */
+        public void displayAllocationStatistics() {
+            System.out.println("\n========================================");
+            System.out.println("    ALLOCATION STATISTICS               ");
+            System.out.println("========================================");
+
+            System.out.println("\nGlobal Statistics:");
+            System.out.println("  Total Unique Room IDs Generated: " + allocatedRoomIds.size());
+
+            System.out.println("\nRoom Type Statistics:");
+            for (Map.Entry<String, Set<String>> entry : roomTypeToAllocatedIds.entrySet()) {
+                System.out.println("  " + entry.getKey() + ": " + entry.getValue().size() + " allocated");
+            }
+
+            // UC6: Verify uniqueness (should never have duplicates)
+            int totalByType = roomTypeToAllocatedIds.values().stream()
+                    .mapToInt(Set::size)
+                    .sum();
+
+            System.out.println("\nUniqueness Verification:");
+            System.out.println("  Total IDs in global set: " + allocatedRoomIds.size());
+            System.out.println("  Total IDs in type sets: " + totalByType);
+
+            if (allocatedRoomIds.size() == totalByType) {
+                System.out.println("  ✓ VERIFIED: No duplicates - uniqueness enforced");
+            } else {
+                System.out.println("  ✗ ERROR: Mismatch detected - inconsistency!");
+            }
+
+            System.out.println("\n========================================");
         }
     }
 
@@ -674,26 +836,23 @@ public class BookMyStay {
         System.out.println("\n========================================");
         System.out.println("    BOOK MY STAY - HOTEL BOOKING APP    ");
         System.out.println("========================================");
-        System.out.println("Version: 5.1");
-        System.out.println("Use Case 5: Booking Request (First-Come-First-Served)");
+        System.out.println("Version: 6.1");
+        System.out.println("Use Case 6: Reservation Confirmation & Room Allocation");
         System.out.println("========================================\n");
     }
 
     /**
-     * UC5: Demonstrate multiple guest booking requests
-     *
-     * @param requestQueue BookingRequestQueue instance
-     * @param inventory RoomInventory instance
+     * UC6: Demonstrate complete booking flow from request to allocation
      */
-    public static void demonstrateBookingRequests(BookingRequestQueue requestQueue,
-                                                  RoomInventory inventory) {
+    public static void demonstrateBookingFlow(BookingRequestQueue requestQueue,
+                                              RoomInventory inventory,
+                                              RoomAllocationService allocationService) {
         System.out.println("\n========================================");
-        System.out.println("    GUEST BOOKING REQUESTS               ");
+        System.out.println("    COMPLETE BOOKING FLOW DEMONSTRATION ");
         System.out.println("========================================");
 
-        // UC5: Scenario 1 - Multiple guests submit requests simultaneously
-        System.out.println("\n--- SCENARIO 1: Multiple booking requests arrive ---");
-        System.out.println("(Simulating peak demand - requests submitted in quick succession)\n");
+        // UC6: Scenario 1 - Add booking requests
+        System.out.println("\n--- SCENARIO 1: Guests submit booking requests ---\n");
 
         requestQueue.addBookingRequest("Rajesh Kumar", "Single Room", 3);
         requestQueue.addBookingRequest("Priya Sharma", "Double Room", 2);
@@ -702,31 +861,64 @@ public class BookMyStay {
         requestQueue.addBookingRequest("Vikram Gupta", "Single Room", 5);
         requestQueue.addBookingRequest("Anjali Verma", "Suite Room", 2);
 
-        // UC5: Display queue status
-        System.out.println("\n--- SCENARIO 2: View pending requests (FIFO order) ---");
+        System.out.println("\n--- SCENARIO 2: Display pending requests ---");
         requestQueue.displayPendingRequests();
 
-        // UC5: Display queue statistics
-        System.out.println("\n--- SCENARIO 3: Queue statistics ---");
-        requestQueue.displayQueueStatistics();
+        // UC6: Scenario 2 - Initial inventory state
+        System.out.println("\n--- SCENARIO 3: Initial inventory state ---");
+        inventory.displayInventory();
 
-        // UC5: Process requests one by one (FIFO principle)
-        System.out.println("\n--- SCENARIO 4: Process booking requests (FIFO order) ---");
-        System.out.println("(Processing in the exact order they were received)\n");
+        // UC6: Scenario 3 - Process requests and allocate rooms
+        System.out.println("\n--- SCENARIO 4: Process booking requests (FIFO) & Allocate Rooms ---");
+        System.out.println("(Confirming reservations with room assignment)\n");
 
-        int processedCount = 0;
-        while (requestQueue.hasPendingRequests() && processedCount < 4) {
-            requestQueue.processNextBooking(inventory);
-            processedCount++;
+        int successfulAllocations = 0;
+        int processedRequests = 0;
+
+        while (requestQueue.hasPendingRequests() && processedRequests < 6) {
+            Reservation nextRequest = requestQueue.pollNextRequest();
+
+            if (nextRequest != null) {
+                System.out.println("Processing: " + nextRequest.getReservationId() +
+                        " (" + nextRequest.getGuestName() + ")");
+
+                // UC6: Allocate room
+                if (allocationService.allocateRoom(nextRequest, inventory)) {
+                    System.out.println("✓ CONFIRMED: Room " + nextRequest.getAssignedRoomId() +
+                            " assigned to " + nextRequest.getGuestName());
+                    successfulAllocations++;
+                } else {
+                    nextRequest.setStatus("Rejected");
+                    System.out.println("✗ REJECTED: No rooms available for " +
+                            nextRequest.getRequestedRoomType());
+                }
+
+                System.out.println();
+                processedRequests++;
+            }
         }
 
-        // UC5: Display remaining queue
-        System.out.println("\n--- SCENARIO 5: Remaining pending requests ---");
-        requestQueue.displayPendingRequests();
+        // UC6: Scenario 4 - Display allocated rooms
+        System.out.println("\n--- SCENARIO 5: Display allocated rooms (Set Uniqueness) ---");
+        allocationService.displayAllocatedRooms();
 
-        // UC5: Display current inventory
-        System.out.println("\n--- SCENARIO 6: Current inventory after processing ---");
+        // UC6: Scenario 5 - Allocation statistics
+        System.out.println("\n--- SCENARIO 6: Allocation statistics & verification ---");
+        allocationService.displayAllocationStatistics();
+
+        // UC6: Scenario 6 - Updated inventory
+        System.out.println("\n--- SCENARIO 7: Updated inventory after allocations ---");
         inventory.displayInventory();
+
+        // UC6: Summary
+        System.out.println("\n--- SCENARIO 8: Booking Summary ---");
+        System.out.println("✓ Requests Processed: " + processedRequests);
+        System.out.println("✓ Successful Allocations: " + successfulAllocations);
+        System.out.println("✓ Rooms Allocated (Unique IDs): " + allocationService.getAllocatedRoomCount());
+
+        if (requestQueue.hasPendingRequests()) {
+            System.out.println("⏳ Remaining in Queue: " + requestQueue.getPendingRequestCount());
+        }
     }
 
     // ============================================
@@ -735,7 +927,7 @@ public class BookMyStay {
 
     /**
      * Main method - Entry point of the application
-     * Demonstrates UC5: Booking request queue management with FIFO principle
+     * Demonstrates UC6: Room allocation with double-booking prevention
      *
      * @param args Command line arguments (not used)
      */
@@ -743,64 +935,67 @@ public class BookMyStay {
         // Display welcome message
         displayWelcomeMessage();
 
-        // Create and initialize centralized inventory
-        System.out.println("--- STEP 1: Initialize System ---");
+        // Initialize system components
+        System.out.println("--- STEP 1: Initialize System Components ---");
         RoomInventory inventory = new RoomInventory();
         inventory.displayInventory();
 
-        // UC5: Create booking request queue (NEW)
-        System.out.println("\n--- STEP 2: Initialize Booking Request Queue ---");
         BookingRequestQueue requestQueue = new BookingRequestQueue();
-        System.out.println("✓ Booking request queue initialized!");
-        System.out.println("  Data Structure: Queue (LinkedList)");
-        System.out.println("  Processing Model: FIFO (First-Come-First-Served)");
+        System.out.println("\n✓ Booking request queue initialized");
 
-        // UC5: Demonstrate booking requests (NEW)
-        System.out.println("\n--- STEP 3: Demonstrate Booking Requests ---");
-        demonstrateBookingRequests(requestQueue, inventory);
+        // UC6: Initialize room allocation service (NEW)
+        System.out.println("\n--- STEP 2: Initialize Room Allocation Service ---");
+        RoomAllocationService allocationService = new RoomAllocationService();
+        System.out.println("✓ Room allocation service initialized!");
+        System.out.println("  Data Structure: Set<String> for room ID uniqueness");
+        System.out.println("  Mapping: HashMap<String, Set<String>> for room types");
+
+        // UC6: Demonstrate complete booking flow
+        System.out.println("\n--- STEP 3: Demonstrate Complete Booking Flow ---");
+        demonstrateBookingFlow(requestQueue, inventory, allocationService);
 
         // Final status message
         System.out.println("\n========================================");
-        System.out.println("UC5 Demonstration Complete!");
-        System.out.println("Booking request queue established.");
-        System.out.println("FIFO fairness principle demonstrated.");
-        System.out.println("Ready for advanced queue management in UC6...");
+        System.out.println("UC6 Demonstration Complete!");
+        System.out.println("Room allocation with double-booking prevention established.");
+        System.out.println("Inventory synchronization verified.");
+        System.out.println("Ready for advanced booking scenarios in UC7...");
         System.out.println("========================================\n");
 
-        // Display UC5 advantages
+        // Display UC6 advantages
         System.out.println("========================================");
-        System.out.println("    UC5 ADVANTAGES - FAIR FIFO BOOKING  ");
+        System.out.println("    UC6 ADVANTAGES - SAFE ALLOCATION    ");
         System.out.println("========================================");
-        System.out.println("\n✓ Queue data structure ensures FIFO order");
-        System.out.println("✓ Fair allocation - first come, first served");
-        System.out.println("✓ O(1) average-time insertion and removal");
-        System.out.println("✓ Request ordering preserved automatically");
-        System.out.println("✓ Decoupled request intake from allocation");
-        System.out.println("✓ Handles peak demand fairly");
-        System.out.println("✓ Scales well with multiple simultaneous requests");
-        System.out.println("✓ Eliminates unfair booking advantage");
+        System.out.println("\n✓ Set<String> enforces room ID uniqueness");
+        System.out.println("✓ O(1) lookup prevents double-booking");
+        System.out.println("✓ Atomic operations maintain consistency");
+        System.out.println("✓ Immediate inventory synchronization");
+        System.out.println("✓ Grouped tracking by room type");
+        System.out.println("✓ Impossible to assign same room twice");
+        System.out.println("✓ Scalable allocation pattern");
+        System.out.println("✓ Verified uniqueness enforcement");
         System.out.println("\n========================================\n");
 
-        // Display Queue vs Other Structures
+        // Display set vs other structures
         System.out.println("========================================");
-        System.out.println("    WHY QUEUE FOR BOOKING REQUESTS?     ");
+        System.out.println("    WHY SET FOR ROOM ID UNIQUENESS?     ");
         System.out.println("========================================");
         System.out.println("\nComparison with other data structures:\n");
-        System.out.println("Stack:");
-        System.out.println("  ✗ LIFO (Last-In-First-Out)");
-        System.out.println("  ✗ Unfair - latest requests processed first");
-        System.out.println("  ✗ Not suitable for booking fairness\n");
+        System.out.println("List:");
+        System.out.println("  ✗ Allows duplicates");
+        System.out.println("  ✗ Requires manual duplicate check");
+        System.out.println("  ✗ O(n) lookup time\n");
 
-        System.out.println("List/ArrayList:");
-        System.out.println("  ? Can maintain order but no inherent FIFO");
-        System.out.println("  ✗ Requires manual index management");
-        System.out.println("  ✗ Less efficient for queue operations\n");
+        System.out.println("HashSet (CHOSEN):");
+        System.out.println("  ✓ Automatically prevents duplicates");
+        System.out.println("  ✓ O(1) lookup time");
+        System.out.println("  ✓ Perfect for uniqueness enforcement");
+        System.out.println("  ✓ Built-in double-booking prevention\n");
 
-        System.out.println("Queue/LinkedList:");
-        System.out.println("  ✓ FIFO (First-In-First-Out)");
-        System.out.println("  ✓ Natural fairness - first request processed first");
-        System.out.println("  ✓ O(1) add and remove operations");
-        System.out.println("  ✓ Perfect for booking systems");
+        System.out.println("TreeSet:");
+        System.out.println("  ✓ Prevents duplicates but");
+        System.out.println("  ✗ O(log n) lookup time");
+        System.out.println("  ✗ Unnecessary sorting overhead");
         System.out.println("\n========================================\n");
     }
 }
