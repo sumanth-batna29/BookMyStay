@@ -1,20 +1,20 @@
 import java.util.*;
 
 /**
- * Hotel Booking Management System - Use Case 3
+ * Hotel Booking Management System - Use Case 4
  *
- * Centralized Room Inventory Management
+ * Room Search & Availability Check
  *
  * This class demonstrates:
- * - Problem of scattered state (from UC2)
- * - Centralized inventory management using HashMap
- * - O(1) lookup and update operations
- * - Single source of truth for room availability
- * - Encapsulation of inventory logic
- * - Separation of concerns between Room and Inventory
+ * - Read-only access to inventory and room data
+ * - Defensive programming with validation checks
+ * - Separation of concerns (search vs. booking)
+ * - Filtering available rooms
+ * - Safe data access patterns
+ * - Room search service with guest interactions
  *
  * @author sumanth-batna29
- * @version 3.1
+ * @version 4.1
  * @since 2026-03-25
  */
 public class BookMyStay {
@@ -83,6 +83,30 @@ public class BookMyStay {
          */
         public double getPricePerNight() {
             return pricePerNight;
+        }
+
+        /**
+         * Get number of beds
+         * @return number of beds
+         */
+        public int getNumberOfBeds() {
+            return numberOfBeds;
+        }
+
+        /**
+         * Get room size
+         * @return room size in square feet
+         */
+        public int getRoomSize() {
+            return roomSize;
+        }
+
+        /**
+         * Get amenities
+         * @return amenities string
+         */
+        public String getAmenities() {
+            return amenities;
         }
     }
 
@@ -170,11 +194,11 @@ public class BookMyStay {
     }
 
     // ============================================
-    // ROOM INVENTORY CLASS (UC3 - NEW)
+    // ROOM INVENTORY CLASS
     // ============================================
 
     /**
-     * UC3: RoomInventory class - Centralized inventory management
+     * RoomInventory class - Centralized inventory management
      *
      * Encapsulates all inventory-related operations using HashMap.
      * This class maintains a single source of truth for room availability.
@@ -182,10 +206,10 @@ public class BookMyStay {
      */
     static class RoomInventory {
 
-        // UC3: HashMap for centralized room availability
+        // HashMap for centralized room availability
         private HashMap<String, Integer> inventoryMap;
 
-        // UC3: Total room counts (immutable reference)
+        // Total room counts (immutable reference)
         private HashMap<String, Integer> totalRoomsMap;
 
         /**
@@ -198,7 +222,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC3: Initialize inventory with all room types
+         * Initialize inventory with all room types
          * This method demonstrates centralized initialization in one place.
          */
         private void initializeInventory() {
@@ -218,7 +242,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC3: Get available rooms for a specific room type
+         * UC4: Get available rooms for a specific room type (READ-ONLY)
          * Time Complexity: O(1) - HashMap get operation
          *
          * @param roomType Type of room
@@ -229,7 +253,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC3: Get total rooms for a specific room type
+         * Get total rooms for a specific room type
          *
          * @param roomType Type of room
          * @return Total number of rooms of this type
@@ -239,7 +263,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC3: Check if room type exists in inventory
+         * Check if room type exists in inventory
          * Time Complexity: O(1)
          *
          * @param roomType Type of room
@@ -250,7 +274,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC3: Book a room (decrement availability)
+         * Book a room (decrement availability)
          * Time Complexity: O(1)
          *
          * @param roomType Type of room to book
@@ -275,7 +299,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC3: Cancel a booking (increment availability)
+         * Cancel a booking (increment availability)
          * Time Complexity: O(1)
          *
          * @param roomType Type of room to cancel
@@ -302,7 +326,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC3: Display all room types and their availability
+         * Display all room types and their availability
          * Uses entrySet() for efficient iteration over HashMap
          * Time Complexity: O(n) where n = number of room types
          */
@@ -312,7 +336,7 @@ public class BookMyStay {
             System.out.println("========================================");
             System.out.println("\nRoom Type Availability:\n");
 
-            // UC3: Iterate using entrySet() for key-value pairs
+            // Iterate using entrySet() for key-value pairs
             int serialNo = 1;
             for (Map.Entry<String, Integer> entry : inventoryMap.entrySet()) {
                 String roomType = entry.getKey();
@@ -331,7 +355,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC3: Display inventory as a visual bar
+         * Display inventory as a visual bar
          *
          * @param available Number of available rooms
          * @param total Total number of rooms
@@ -350,7 +374,7 @@ public class BookMyStay {
         }
 
         /**
-         * UC3: Get occupancy statistics
+         * Get occupancy statistics
          * Time Complexity: O(n) where n = number of room types
          */
         public void displayOccupancyStats() {
@@ -362,7 +386,7 @@ public class BookMyStay {
             int totalAvailable = 0;
             int totalRooms = 0;
 
-            // UC3: Iterate using keySet()
+            // Iterate using keySet()
             for (String roomType : inventoryMap.keySet()) {
                 int available = getAvailableRooms(roomType);
                 int total = getTotalRooms(roomType);
@@ -384,26 +408,227 @@ public class BookMyStay {
 
             System.out.println("\n========================================");
         }
+    }
+
+    // ============================================
+    // UC4: ROOM SEARCH SERVICE CLASS (NEW)
+    // ============================================
+
+    /**
+     * UC4: RoomSearchService class - Read-only search and availability check
+     *
+     * Provides guests with the ability to search for available rooms
+     * without modifying system state. Implements defensive programming
+     * with validation checks and safe data access patterns.
+     */
+    static class RoomSearchService {
+
+        // Reference to inventory (read-only access)
+        private RoomInventory inventory;
+
+        // Room objects for domain information
+        private Map<String, Room> roomCatalog;
 
         /**
-         * UC3: Display detailed inventory report
+         * UC4: Constructor - Initialize search service
+         *
+         * @param inventory Reference to centralized inventory
          */
-        public void displayDetailedReport() {
+        public RoomSearchService(RoomInventory inventory) {
+            this.inventory = inventory;
+            this.roomCatalog = new HashMap<>();
+            initializeRoomCatalog();
+        }
+
+        /**
+         * UC4: Initialize room catalog with all room types
+         * Separates room domain information from inventory state
+         */
+        private void initializeRoomCatalog() {
+            roomCatalog.put("Single Room", new SingleRoom());
+            roomCatalog.put("Double Room", new DoubleRoom());
+            roomCatalog.put("Suite Room", new SuiteRoom());
+        }
+
+        /**
+         * UC4: Search for available rooms
+         * READ-ONLY operation - does not modify inventory
+         * Filters rooms to show only those with availability > 0
+         *
+         * @return List of available room types
+         */
+        public List<String> searchAvailableRooms() {
+            List<String> availableRooms = new ArrayList<>();
+
+            // UC4: Iterate through room catalog
+            for (String roomType : roomCatalog.keySet()) {
+                // UC4: Defensive check - verify availability before adding
+                int available = inventory.getAvailableRooms(roomType);
+
+                // UC4: Validation logic - include only rooms with availability > 0
+                if (available > 0) {
+                    availableRooms.add(roomType);
+                }
+            }
+
+            return availableRooms;
+        }
+
+        /**
+         * UC4: Check availability of a specific room type
+         * READ-ONLY operation
+         *
+         * @param roomType Type of room to check
+         * @return true if room is available, false otherwise
+         */
+        public boolean isRoomAvailable(String roomType) {
+            // UC4: Defensive programming - verify room exists first
+            if (!inventory.roomTypeExists(roomType)) {
+                return false;
+            }
+
+            // UC4: Check if availability is greater than 0
+            return inventory.getAvailableRooms(roomType) > 0;
+        }
+
+        /**
+         * UC4: Get available count for a room type
+         * READ-ONLY operation
+         *
+         * @param roomType Type of room
+         * @return Number of available rooms
+         */
+        public int getAvailabilityCount(String roomType) {
+            return inventory.getAvailableRooms(roomType);
+        }
+
+        /**
+         * UC4: Get room details by type
+         * READ-ONLY operation - returns room information without state changes
+         *
+         * @param roomType Type of room
+         * @return Room object with details, or null if not found
+         */
+        public Room getRoomDetails(String roomType) {
+            return roomCatalog.get(roomType);
+        }
+
+        /**
+         * UC4: Display detailed search results
+         * Shows available rooms with full details and pricing
+         * READ-ONLY operation
+         */
+        public void displaySearchResults() {
             System.out.println("\n========================================");
-            System.out.println("    DETAILED INVENTORY REPORT           ");
+            System.out.println("    AVAILABLE ROOMS - SEARCH RESULTS    ");
+            System.out.println("========================================\n");
+
+            // UC4: Get list of available rooms
+            List<String> availableRooms = searchAvailableRooms();
+
+            // UC4: Defensive check - handle case when no rooms are available
+            if (availableRooms.isEmpty()) {
+                System.out.println("✗ Sorry! No rooms are currently available.");
+                System.out.println("Please try again later.\n");
+                return;
+            }
+
+            System.out.println("Found " + availableRooms.size() + " available room type(s):\n");
+
+            // UC4: Display each available room with full details
+            int serialNo = 1;
+            for (String roomType : availableRooms) {
+                Room room = getRoomDetails(roomType);
+                int available = getAvailabilityCount(roomType);
+
+                // UC4: Defensive check - ensure room object exists
+                if (room != null) {
+                    System.out.println("  " + serialNo + ". " + roomType);
+                    System.out.println("     Price: ₹" + room.getPricePerNight() + " per night");
+                    System.out.println("     Beds: " + room.getNumberOfBeds());
+                    System.out.println("     Size: " + room.getRoomSize() + " sq ft");
+                    System.out.println("     Amenities: " + room.getAmenities());
+                    System.out.println("     Available: " + available + " room(s)");
+                    System.out.println();
+
+                    serialNo++;
+                }
+            }
+
+            System.out.println("========================================");
+        }
+
+        /**
+         * UC4: Filter rooms by price range
+         * READ-ONLY operation - returns filtered list
+         *
+         * @param minPrice Minimum price
+         * @param maxPrice Maximum price
+         * @return List of room types within price range and available
+         */
+        public List<String> filterByPrice(double minPrice, double maxPrice) {
+            List<String> filteredRooms = new ArrayList<>();
+
+            // UC4: Search available rooms first
+            List<String> availableRooms = searchAvailableRooms();
+
+            // UC4: Filter by price range
+            for (String roomType : availableRooms) {
+                Room room = getRoomDetails(roomType);
+
+                if (room != null && room.getPricePerNight() >= minPrice &&
+                        room.getPricePerNight() <= maxPrice) {
+                    filteredRooms.add(roomType);
+                }
+            }
+
+            return filteredRooms;
+        }
+
+        /**
+         * UC4: Filter rooms by number of beds
+         * READ-ONLY operation
+         *
+         * @param numberOfBeds Number of beds to filter by
+         * @return List of room types with specified bed count and available
+         */
+        public List<String> filterByBeds(int numberOfBeds) {
+            List<String> filteredRooms = new ArrayList<>();
+
+            List<String> availableRooms = searchAvailableRooms();
+
+            for (String roomType : availableRooms) {
+                Room room = getRoomDetails(roomType);
+
+                if (room != null && room.getNumberOfBeds() == numberOfBeds) {
+                    filteredRooms.add(roomType);
+                }
+            }
+
+            return filteredRooms;
+        }
+
+        /**
+         * UC4: Display search statistics
+         * Provides insights about available inventory
+         * READ-ONLY operation
+         */
+        public void displaySearchStatistics() {
+            System.out.println("\n========================================");
+            System.out.println("    SEARCH STATISTICS                   ");
             System.out.println("========================================");
 
-            System.out.println("\nUsing values() to get all availability counts:");
-            System.out.print("Availability Counts: ");
-            System.out.println(inventoryMap.values());
+            List<String> availableRooms = searchAvailableRooms();
 
-            System.out.println("\nUsing keySet() to get all room types:");
-            System.out.println("Room Types: " + inventoryMap.keySet());
+            System.out.println("\nAvailable Room Types: " + availableRooms.size());
+            System.out.println("Available Rooms List: " + availableRooms);
 
-            System.out.println("\nUsing entrySet() for key-value pairs:");
-            for (Map.Entry<String, Integer> entry : inventoryMap.entrySet()) {
-                System.out.println("  " + entry.getKey() + " → " + entry.getValue() + " available");
+            int totalAvailableCount = 0;
+            for (String roomType : availableRooms) {
+                totalAvailableCount += getAvailabilityCount(roomType);
             }
+
+            System.out.println("Total Available Rooms: " + totalAvailableCount);
 
             System.out.println("\n========================================");
         }
@@ -420,63 +645,47 @@ public class BookMyStay {
         System.out.println("\n========================================");
         System.out.println("    BOOK MY STAY - HOTEL BOOKING APP    ");
         System.out.println("========================================");
-        System.out.println("Version: 3.1");
-        System.out.println("Use Case 3: Centralized Room Inventory Management");
+        System.out.println("Version: 4.1");
+        System.out.println("Use Case 4: Room Search & Availability Check");
         System.out.println("========================================\n");
     }
 
     /**
-     * Display all room types and their details using polymorphism
-     */
-    public static void displayAllRoomTypes() {
-        System.out.println("\n========================================");
-        System.out.println("    AVAILABLE ROOM TYPES                ");
-        System.out.println("========================================");
-
-        // Create room objects (polymorphic references)
-        Room[] rooms = new Room[3];
-        rooms[0] = new SingleRoom();
-        rooms[1] = new DoubleRoom();
-        rooms[2] = new SuiteRoom();
-
-        // Display details for all room types using polymorphism
-        for (Room room : rooms) {
-            room.displayRoomDetails();
-        }
-    }
-
-    /**
-     * UC3: Demonstrate booking and cancellation operations
+     * UC4: Demonstrate guest search scenarios
      *
-     * @param inventory RoomInventory instance
+     * @param searchService RoomSearchService instance
      */
-    public static void demonstrateBookingOperations(RoomInventory inventory) {
+    public static void demonstrateGuestSearches(RoomSearchService searchService) {
         System.out.println("\n========================================");
-        System.out.println("    BOOKING OPERATIONS DEMONSTRATION    ");
+        System.out.println("    GUEST SEARCH SCENARIOS               ");
         System.out.println("========================================");
 
-        System.out.println("\n--- STEP 1: Book Single Rooms ---");
-        inventory.bookRoom("Single Room");
-        inventory.bookRoom("Single Room");
+        // UC4: Scenario 1 - Search all available rooms
+        System.out.println("\n--- SCENARIO 1: Guest searches for all available rooms ---");
+        searchService.displaySearchResults();
 
-        System.out.println("\n--- STEP 2: Book Double Rooms ---");
-        inventory.bookRoom("Double Room");
-        inventory.bookRoom("Double Room");
-        inventory.bookRoom("Double Room");
+        // UC4: Scenario 2 - Search statistics
+        System.out.println("\n--- SCENARIO 2: View search statistics ---");
+        searchService.displaySearchStatistics();
 
-        System.out.println("\n--- STEP 3: Attempt to book Suite Rooms ---");
-        inventory.bookRoom("Suite Room");
-        inventory.bookRoom("Suite Room");
-        inventory.bookRoom("Suite Room");
-        inventory.bookRoom("Suite Room");  // This should fail
+        // UC4: Scenario 3 - Filter by price range
+        System.out.println("\n--- SCENARIO 3: Filter rooms by price (₹2000 - ₹4000) ---");
+        List<String> priceFiltered = searchService.filterByPrice(2000, 4000);
+        System.out.println("Rooms within budget: " + priceFiltered);
 
-        System.out.println("\n--- STEP 4: Cancel a booking ---");
-        inventory.cancelBooking("Suite Room");
+        // UC4: Scenario 4 - Filter by number of beds
+        System.out.println("\n--- SCENARIO 4: Filter rooms with 2 beds ---");
+        List<String> bedFiltered = searchService.filterByBeds(2);
+        System.out.println("Rooms with 2 beds: " + bedFiltered);
 
-        System.out.println("\n--- STEP 5: Try to cancel when no bookings exist ---");
-        inventory.cancelBooking("Single Room");
-
-        System.out.println("\n========================================");
+        // UC4: Scenario 5 - Check specific room availability
+        System.out.println("\n--- SCENARIO 5: Check specific room availability ---");
+        System.out.println("Is Single Room available? " +
+                searchService.isRoomAvailable("Single Room"));
+        System.out.println("Is Suite Room available? " +
+                searchService.isRoomAvailable("Suite Room"));
+        System.out.println("Single Room availability: " +
+                searchService.getAvailabilityCount("Single Room"));
     }
 
     // ============================================
@@ -485,7 +694,7 @@ public class BookMyStay {
 
     /**
      * Main method - Entry point of the application
-     * Demonstrates UC3: Centralized inventory management using HashMap
+     * Demonstrates UC4: Room search and availability checking
      *
      * @param args Command line arguments (not used)
      */
@@ -493,47 +702,59 @@ public class BookMyStay {
         // Display welcome message
         displayWelcomeMessage();
 
-        // Display all room types with details
-        displayAllRoomTypes();
-
-        // UC3: Create and initialize centralized inventory
-        System.out.println("\n--- STEP 1: Initialize Centralized Inventory ---");
+        // Create and initialize centralized inventory
+        System.out.println("--- STEP 1: Initialize System ---");
         RoomInventory inventory = new RoomInventory();
 
-        // UC3: Display current inventory state
+        // Display initial inventory
         inventory.displayInventory();
 
-        // UC3: Display detailed report
-        inventory.displayDetailedReport();
+        // Perform some bookings to change inventory state
+        System.out.println("\n--- STEP 2: Simulate Some Bookings ---");
+        inventory.bookRoom("Single Room");
+        inventory.bookRoom("Single Room");
+        inventory.bookRoom("Double Room");
+        inventory.bookRoom("Double Room");
+        inventory.bookRoom("Suite Room");
 
-        // UC3: Display occupancy statistics
-        inventory.displayOccupancyStats();
-
-        // UC3: Demonstrate booking and cancellation operations
-        demonstrateBookingOperations(inventory);
-
-        // UC3: Display updated inventory after operations
-        System.out.println("\n--- STEP 6: Display Updated Inventory ---");
+        // Display updated inventory after bookings
         inventory.displayInventory();
         inventory.displayOccupancyStats();
+
+        // UC4: Create room search service (NEW)
+        System.out.println("\n--- STEP 3: Initialize Room Search Service ---");
+        RoomSearchService searchService = new RoomSearchService(inventory);
+        System.out.println("✓ Search service initialized successfully!");
+
+        // UC4: Demonstrate guest search scenarios (NEW)
+        System.out.println("\n--- STEP 4: Demonstrate Guest Search Operations ---");
+        demonstrateGuestSearches(searchService);
+
+        // Verify inventory has not been modified by search operations
+        System.out.println("\n--- STEP 5: Verify Inventory Unchanged After Searches ---");
+        System.out.println("✓ Search operations are READ-ONLY");
+        System.out.println("✓ Inventory state has NOT been modified");
+        inventory.displayInventory();
 
         // Final status message
         System.out.println("\n========================================");
-        System.out.println("UC3 Demonstration Complete!");
-        System.out.println("Centralized inventory management established.");
-        System.out.println("Ready for booking queue management in UC4...");
+        System.out.println("UC4 Demonstration Complete!");
+        System.out.println("Room search functionality established.");
+        System.out.println("Separation of read and write operations confirmed.");
+        System.out.println("Ready for booking queue management in UC5...");
         System.out.println("========================================\n");
 
-        // Display HashMap advantages
+        // Display UC4 advantages
         System.out.println("========================================");
-        System.out.println("    HASHMAP ADVANTAGES IN UC3           ");
+        System.out.println("    UC4 ADVANTAGES - SAFE SEARCH ACCESS ");
         System.out.println("========================================");
-        System.out.println("\n✓ O(1) average-time lookup and updates");
-        System.out.println("✓ Single source of truth for availability");
-        System.out.println("✓ Scalable: easy to add new room types");
-        System.out.println("✓ Encapsulated: controlled access via methods");
-        System.out.println("✓ Flexible: supports dynamic room management");
-        System.out.println("✓ Consistent: eliminates scattered state");
+        System.out.println("\n✓ Read-only search operations");
+        System.out.println("✓ Defensive programming with validation checks");
+        System.out.println("✓ Separation of search from booking logic");
+        System.out.println("✓ Inventory remains consistent and safe");
+        System.out.println("✓ Clear separation of concerns");
+        System.out.println("✓ Filtering capabilities for guest preferences");
+        System.out.println("✓ No unintended side effects");
         System.out.println("\n========================================\n");
     }
 }
