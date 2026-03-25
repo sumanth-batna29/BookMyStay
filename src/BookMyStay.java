@@ -1,20 +1,20 @@
 import java.util.*;
 
 /**
- * Hotel Booking Management System - Use Case 4
+ * Hotel Booking Management System - Use Case 5
  *
- * Room Search & Availability Check
+ * Booking Request (First-Come-First-Served)
  *
  * This class demonstrates:
- * - Read-only access to inventory and room data
- * - Defensive programming with validation checks
- * - Separation of concerns (search vs. booking)
- * - Filtering available rooms
- * - Safe data access patterns
- * - Room search service with guest interactions
+ * - Queue data structure for fair request ordering
+ * - FIFO (First-Come-First-Served) principle
+ * - Reservation model for booking intent
+ * - Request intake without inventory mutation
+ * - Fairness in booking allocation
+ * - Decoupling request intake from allocation
  *
  * @author sumanth-batna29
- * @version 4.1
+ * @version 5.1
  * @since 2026-03-25
  */
 public class BookMyStay {
@@ -194,6 +194,118 @@ public class BookMyStay {
     }
 
     // ============================================
+    // UC5: RESERVATION CLASS (NEW)
+    // ============================================
+
+    /**
+     * UC5: Reservation class - Represents a guest's booking intent
+     *
+     * Encapsulates all information related to a booking request.
+     * Contains guest details, room preference, and timestamps for ordering.
+     */
+    static class Reservation {
+
+        private String reservationId;
+        private String guestName;
+        private String requestedRoomType;
+        private int numberOfNights;
+        private long requestTimestamp;
+        private String status; // "Pending", "Approved", "Rejected"
+
+        /**
+         * UC5: Constructor - Create a new reservation
+         *
+         * @param reservationId Unique reservation ID
+         * @param guestName Name of the guest
+         * @param requestedRoomType Type of room requested
+         * @param numberOfNights Number of nights for booking
+         */
+        public Reservation(String reservationId, String guestName,
+                           String requestedRoomType, int numberOfNights) {
+            this.reservationId = reservationId;
+            this.guestName = guestName;
+            this.requestedRoomType = requestedRoomType;
+            this.numberOfNights = numberOfNights;
+            this.requestTimestamp = System.currentTimeMillis();
+            this.status = "Pending";
+        }
+
+        /**
+         * UC5: Get reservation ID
+         * @return reservation ID
+         */
+        public String getReservationId() {
+            return reservationId;
+        }
+
+        /**
+         * UC5: Get guest name
+         * @return guest name
+         */
+        public String getGuestName() {
+            return guestName;
+        }
+
+        /**
+         * UC5: Get requested room type
+         * @return room type
+         */
+        public String getRequestedRoomType() {
+            return requestedRoomType;
+        }
+
+        /**
+         * UC5: Get number of nights
+         * @return number of nights
+         */
+        public int getNumberOfNights() {
+            return numberOfNights;
+        }
+
+        /**
+         * UC5: Get request timestamp
+         * @return timestamp in milliseconds
+         */
+        public long getRequestTimestamp() {
+            return requestTimestamp;
+        }
+
+        /**
+         * UC5: Get reservation status
+         * @return current status
+         */
+        public String getStatus() {
+            return status;
+        }
+
+        /**
+         * UC5: Set reservation status
+         * @param status New status
+         */
+        public void setStatus(String status) {
+            this.status = status;
+        }
+
+        /**
+         * UC5: Display reservation details
+         */
+        public void displayDetails() {
+            System.out.println("Reservation ID: " + reservationId);
+            System.out.println("Guest Name: " + guestName);
+            System.out.println("Room Type: " + requestedRoomType);
+            System.out.println("Number of Nights: " + numberOfNights);
+            System.out.println("Status: " + status);
+        }
+
+        @Override
+        public String toString() {
+            return "[" + reservationId + "] " + guestName +
+                    " - " + requestedRoomType +
+                    " (" + numberOfNights + " nights) - " + status;
+        }
+    }
+
+    // ============================================
     // ROOM INVENTORY CLASS
     // ============================================
 
@@ -223,7 +335,6 @@ public class BookMyStay {
 
         /**
          * Initialize inventory with all room types
-         * This method demonstrates centralized initialization in one place.
          */
         private void initializeInventory() {
             System.out.println("Initializing centralized room inventory...");
@@ -242,8 +353,8 @@ public class BookMyStay {
         }
 
         /**
-         * UC4: Get available rooms for a specific room type (READ-ONLY)
-         * Time Complexity: O(1) - HashMap get operation
+         * Get available rooms for a specific room type
+         * Time Complexity: O(1)
          *
          * @param roomType Type of room
          * @return Number of available rooms, or 0 if room type not found
@@ -282,53 +393,19 @@ public class BookMyStay {
          */
         public boolean bookRoom(String roomType) {
             if (!roomTypeExists(roomType)) {
-                System.out.println("✗ ERROR: Room type '" + roomType + "' not found!");
                 return false;
             }
 
             int available = getAvailableRooms(roomType);
             if (available > 0) {
                 inventoryMap.put(roomType, available - 1);
-                System.out.println("✓ Room booked successfully! Remaining: " +
-                        getAvailableRooms(roomType));
                 return true;
-            } else {
-                System.out.println("✗ No rooms available for: " + roomType);
-                return false;
             }
-        }
-
-        /**
-         * Cancel a booking (increment availability)
-         * Time Complexity: O(1)
-         *
-         * @param roomType Type of room to cancel
-         * @return true if cancellation successful, false if already at max
-         */
-        public boolean cancelBooking(String roomType) {
-            if (!roomTypeExists(roomType)) {
-                System.out.println("✗ ERROR: Room type '" + roomType + "' not found!");
-                return false;
-            }
-
-            int available = getAvailableRooms(roomType);
-            int total = getTotalRooms(roomType);
-
-            if (available < total) {
-                inventoryMap.put(roomType, available + 1);
-                System.out.println("✓ Booking cancelled successfully! Available: " +
-                        getAvailableRooms(roomType));
-                return true;
-            } else {
-                System.out.println("✗ All rooms already available!");
-                return false;
-            }
+            return false;
         }
 
         /**
          * Display all room types and their availability
-         * Uses entrySet() for efficient iteration over HashMap
-         * Time Complexity: O(n) where n = number of room types
          */
         public void displayInventory() {
             System.out.println("\n========================================");
@@ -336,7 +413,6 @@ public class BookMyStay {
             System.out.println("========================================");
             System.out.println("\nRoom Type Availability:\n");
 
-            // Iterate using entrySet() for key-value pairs
             int serialNo = 1;
             for (Map.Entry<String, Integer> entry : inventoryMap.entrySet()) {
                 String roomType = entry.getKey();
@@ -370,267 +446,220 @@ public class BookMyStay {
                 }
             }
             System.out.println("]");
-            System.out.println("     (█ = Available, ░ = Booked)");
-        }
-
-        /**
-         * Get occupancy statistics
-         * Time Complexity: O(n) where n = number of room types
-         */
-        public void displayOccupancyStats() {
-            System.out.println("\n========================================");
-            System.out.println("    OCCUPANCY STATISTICS                ");
-            System.out.println("========================================");
-
-            int totalBooked = 0;
-            int totalAvailable = 0;
-            int totalRooms = 0;
-
-            // Iterate using keySet()
-            for (String roomType : inventoryMap.keySet()) {
-                int available = getAvailableRooms(roomType);
-                int total = getTotalRooms(roomType);
-                int booked = total - available;
-
-                totalAvailable += available;
-                totalBooked += booked;
-                totalRooms += total;
-            }
-
-            System.out.println("\nTotal Rooms: " + totalRooms);
-            System.out.println("Booked Rooms: " + totalBooked);
-            System.out.println("Available Rooms: " + totalAvailable);
-
-            if (totalRooms > 0) {
-                System.out.println("Occupancy Rate: " +
-                        String.format("%.2f%%", (totalBooked * 100.0) / totalRooms));
-            }
-
-            System.out.println("\n========================================");
         }
     }
 
     // ============================================
-    // UC4: ROOM SEARCH SERVICE CLASS (NEW)
+    // UC5: BOOKING REQUEST QUEUE CLASS (NEW)
     // ============================================
 
     /**
-     * UC4: RoomSearchService class - Read-only search and availability check
+     * UC5: BookingRequestQueue class - FIFO booking request management
      *
-     * Provides guests with the ability to search for available rooms
-     * without modifying system state. Implements defensive programming
-     * with validation checks and safe data access patterns.
+     * Manages incoming booking requests using a Queue data structure.
+     * Implements FIFO (First-Come-First-Served) principle for fairness.
+     * Preserves arrival order of booking requests without inventory mutation.
      */
-    static class RoomSearchService {
+    static class BookingRequestQueue {
 
-        // Reference to inventory (read-only access)
-        private RoomInventory inventory;
+        // UC5: Queue for managing booking requests in FIFO order
+        private Queue<Reservation> requestQueue;
 
-        // Room objects for domain information
-        private Map<String, Room> roomCatalog;
+        // Counter for generating unique reservation IDs
+        private int reservationCounter;
 
         /**
-         * UC4: Constructor - Initialize search service
+         * UC5: Constructor - Initialize booking request queue
+         */
+        public BookingRequestQueue() {
+            // UC5: LinkedList implements Queue interface
+            this.requestQueue = new LinkedList<>();
+            this.reservationCounter = 1000;
+        }
+
+        /**
+         * UC5: Add a booking request to the queue
+         * Time Complexity: O(1) - LinkedList offer operation
+         * FIFO Principle: Request is added at the end
          *
-         * @param inventory Reference to centralized inventory
+         * @param guestName Name of the guest
+         * @param requestedRoomType Type of room requested
+         * @param numberOfNights Number of nights for booking
+         * @return The created Reservation object
          */
-        public RoomSearchService(RoomInventory inventory) {
-            this.inventory = inventory;
-            this.roomCatalog = new HashMap<>();
-            initializeRoomCatalog();
+        public Reservation addBookingRequest(String guestName,
+                                             String requestedRoomType,
+                                             int numberOfNights) {
+            // UC5: Generate unique reservation ID
+            String reservationId = "RES-" + (++reservationCounter);
+
+            // UC5: Create new reservation
+            Reservation reservation = new Reservation(reservationId, guestName,
+                    requestedRoomType, numberOfNights);
+
+            // UC5: Add to queue (FIFO - added at end)
+            requestQueue.offer(reservation);  // or add()
+
+            System.out.println("✓ Booking request added: " + reservationId);
+            System.out.println("  Queue size: " + requestQueue.size());
+
+            return reservation;
         }
 
         /**
-         * UC4: Initialize room catalog with all room types
-         * Separates room domain information from inventory state
-         */
-        private void initializeRoomCatalog() {
-            roomCatalog.put("Single Room", new SingleRoom());
-            roomCatalog.put("Double Room", new DoubleRoom());
-            roomCatalog.put("Suite Room", new SuiteRoom());
-        }
-
-        /**
-         * UC4: Search for available rooms
-         * READ-ONLY operation - does not modify inventory
-         * Filters rooms to show only those with availability > 0
+         * UC5: Get the next booking request from queue (peek without removing)
+         * Time Complexity: O(1)
+         * FIFO Principle: Returns the first request (head of queue)
          *
-         * @return List of available room types
+         * @return Next Reservation to process, or null if queue is empty
          */
-        public List<String> searchAvailableRooms() {
-            List<String> availableRooms = new ArrayList<>();
-
-            // UC4: Iterate through room catalog
-            for (String roomType : roomCatalog.keySet()) {
-                // UC4: Defensive check - verify availability before adding
-                int available = inventory.getAvailableRooms(roomType);
-
-                // UC4: Validation logic - include only rooms with availability > 0
-                if (available > 0) {
-                    availableRooms.add(roomType);
-                }
-            }
-
-            return availableRooms;
+        public Reservation peekNextRequest() {
+            return requestQueue.peek();
         }
 
         /**
-         * UC4: Check availability of a specific room type
-         * READ-ONLY operation
+         * UC5: Remove and return the next booking request from queue
+         * Time Complexity: O(1)
+         * FIFO Principle: Removes and returns the first request
          *
-         * @param roomType Type of room to check
-         * @return true if room is available, false otherwise
+         * @return Next Reservation to process, or null if queue is empty
          */
-        public boolean isRoomAvailable(String roomType) {
-            // UC4: Defensive programming - verify room exists first
-            if (!inventory.roomTypeExists(roomType)) {
-                return false;
-            }
-
-            // UC4: Check if availability is greater than 0
-            return inventory.getAvailableRooms(roomType) > 0;
+        public Reservation pollNextRequest() {
+            return requestQueue.poll();
         }
 
         /**
-         * UC4: Get available count for a room type
-         * READ-ONLY operation
+         * UC5: Check if queue has pending requests
          *
-         * @param roomType Type of room
-         * @return Number of available rooms
+         * @return true if queue is not empty, false otherwise
          */
-        public int getAvailabilityCount(String roomType) {
-            return inventory.getAvailableRooms(roomType);
+        public boolean hasPendingRequests() {
+            return !requestQueue.isEmpty();
         }
 
         /**
-         * UC4: Get room details by type
-         * READ-ONLY operation - returns room information without state changes
+         * UC5: Get number of pending requests in queue
+         * Time Complexity: O(1)
          *
-         * @param roomType Type of room
-         * @return Room object with details, or null if not found
+         * @return Number of requests waiting in queue
          */
-        public Room getRoomDetails(String roomType) {
-            return roomCatalog.get(roomType);
+        public int getPendingRequestCount() {
+            return requestQueue.size();
         }
 
         /**
-         * UC4: Display detailed search results
-         * Shows available rooms with full details and pricing
-         * READ-ONLY operation
+         * UC5: Display all pending booking requests in queue order
+         * Time Complexity: O(n) where n = number of requests
          */
-        public void displaySearchResults() {
+        public void displayPendingRequests() {
             System.out.println("\n========================================");
-            System.out.println("    AVAILABLE ROOMS - SEARCH RESULTS    ");
-            System.out.println("========================================\n");
+            System.out.println("    BOOKING REQUEST QUEUE (FIFO)        ");
+            System.out.println("========================================");
+            System.out.println("\nTotal Pending Requests: " + requestQueue.size());
 
-            // UC4: Get list of available rooms
-            List<String> availableRooms = searchAvailableRooms();
-
-            // UC4: Defensive check - handle case when no rooms are available
-            if (availableRooms.isEmpty()) {
-                System.out.println("✗ Sorry! No rooms are currently available.");
-                System.out.println("Please try again later.\n");
+            // UC5: Defensive check - handle empty queue
+            if (requestQueue.isEmpty()) {
+                System.out.println("\n✓ Queue is empty - no pending requests");
+                System.out.println("\n========================================");
                 return;
             }
 
-            System.out.println("Found " + availableRooms.size() + " available room type(s):\n");
+            System.out.println("\nRequests in order (FIFO):\n");
 
-            // UC4: Display each available room with full details
-            int serialNo = 1;
-            for (String roomType : availableRooms) {
-                Room room = getRoomDetails(roomType);
-                int available = getAvailabilityCount(roomType);
+            // UC5: Display requests in queue order
+            // Note: We iterate through a copy to preserve queue
+            Queue<Reservation> tempQueue = new LinkedList<>(requestQueue);
+            int position = 1;
 
-                // UC4: Defensive check - ensure room object exists
-                if (room != null) {
-                    System.out.println("  " + serialNo + ". " + roomType);
-                    System.out.println("     Price: ₹" + room.getPricePerNight() + " per night");
-                    System.out.println("     Beds: " + room.getNumberOfBeds());
-                    System.out.println("     Size: " + room.getRoomSize() + " sq ft");
-                    System.out.println("     Amenities: " + room.getAmenities());
-                    System.out.println("     Available: " + available + " room(s)");
-                    System.out.println();
-
-                    serialNo++;
-                }
+            while (!tempQueue.isEmpty()) {
+                Reservation reservation = tempQueue.poll();
+                System.out.println("  " + position + ". " + reservation);
+                position++;
             }
-
-            System.out.println("========================================");
-        }
-
-        /**
-         * UC4: Filter rooms by price range
-         * READ-ONLY operation - returns filtered list
-         *
-         * @param minPrice Minimum price
-         * @param maxPrice Maximum price
-         * @return List of room types within price range and available
-         */
-        public List<String> filterByPrice(double minPrice, double maxPrice) {
-            List<String> filteredRooms = new ArrayList<>();
-
-            // UC4: Search available rooms first
-            List<String> availableRooms = searchAvailableRooms();
-
-            // UC4: Filter by price range
-            for (String roomType : availableRooms) {
-                Room room = getRoomDetails(roomType);
-
-                if (room != null && room.getPricePerNight() >= minPrice &&
-                        room.getPricePerNight() <= maxPrice) {
-                    filteredRooms.add(roomType);
-                }
-            }
-
-            return filteredRooms;
-        }
-
-        /**
-         * UC4: Filter rooms by number of beds
-         * READ-ONLY operation
-         *
-         * @param numberOfBeds Number of beds to filter by
-         * @return List of room types with specified bed count and available
-         */
-        public List<String> filterByBeds(int numberOfBeds) {
-            List<String> filteredRooms = new ArrayList<>();
-
-            List<String> availableRooms = searchAvailableRooms();
-
-            for (String roomType : availableRooms) {
-                Room room = getRoomDetails(roomType);
-
-                if (room != null && room.getNumberOfBeds() == numberOfBeds) {
-                    filteredRooms.add(roomType);
-                }
-            }
-
-            return filteredRooms;
-        }
-
-        /**
-         * UC4: Display search statistics
-         * Provides insights about available inventory
-         * READ-ONLY operation
-         */
-        public void displaySearchStatistics() {
-            System.out.println("\n========================================");
-            System.out.println("    SEARCH STATISTICS                   ");
-            System.out.println("========================================");
-
-            List<String> availableRooms = searchAvailableRooms();
-
-            System.out.println("\nAvailable Room Types: " + availableRooms.size());
-            System.out.println("Available Rooms List: " + availableRooms);
-
-            int totalAvailableCount = 0;
-            for (String roomType : availableRooms) {
-                totalAvailableCount += getAvailabilityCount(roomType);
-            }
-
-            System.out.println("Total Available Rooms: " + totalAvailableCount);
 
             System.out.println("\n========================================");
+        }
+
+        /**
+         * UC5: Display queue statistics
+         */
+        public void displayQueueStatistics() {
+            System.out.println("\n========================================");
+            System.out.println("    QUEUE STATISTICS                    ");
+            System.out.println("========================================");
+
+            System.out.println("\nTotal Requests in Queue: " + requestQueue.size());
+            System.out.println("Queue Status: " +
+                    (requestQueue.isEmpty() ? "Empty" : "Active"));
+
+            // Count requests by room type
+            Map<String, Integer> roomTypeCount = new HashMap<>();
+            for (Reservation res : requestQueue) {
+                String roomType = res.getRequestedRoomType();
+                roomTypeCount.put(roomType, roomTypeCount.getOrDefault(roomType, 0) + 1);
+            }
+
+            System.out.println("\nRequests by Room Type:");
+            for (Map.Entry<String, Integer> entry : roomTypeCount.entrySet()) {
+                System.out.println("  " + entry.getKey() + ": " + entry.getValue());
+            }
+
+            System.out.println("\n========================================");
+        }
+
+        /**
+         * UC5: Process first booking request from queue
+         * Demonstrates FIFO allocation principle
+         *
+         * @param inventory RoomInventory for booking allocation
+         * @return true if booking was successful, false otherwise
+         */
+        public boolean processNextBooking(RoomInventory inventory) {
+            // UC5: Peek at next request without removing
+            Reservation nextRequest = peekNextRequest();
+
+            if (nextRequest == null) {
+                System.out.println("✗ No requests to process - queue is empty");
+                return false;
+            }
+
+            System.out.println("\nProcessing booking request: " + nextRequest.getReservationId());
+
+            // UC5: Check if room is available
+            String requestedRoom = nextRequest.getRequestedRoomType();
+            if (inventory.getAvailableRooms(requestedRoom) > 0) {
+                // UC5: Book the room
+                if (inventory.bookRoom(requestedRoom)) {
+                    // UC5: Update reservation status
+                    nextRequest.setStatus("Approved");
+
+                    // UC5: Remove from queue (FIFO processing)
+                    pollNextRequest();
+
+                    System.out.println("✓ Booking approved!");
+                    System.out.println("  Reservation: " + nextRequest.getReservationId());
+                    System.out.println("  Guest: " + nextRequest.getGuestName());
+                    System.out.println("  Room: " + requestedRoom);
+                    System.out.println("  Remaining queue: " + requestQueue.size());
+
+                    return true;
+                }
+            } else {
+                System.out.println("✗ No " + requestedRoom + " available");
+                System.out.println("  Request remains in queue");
+            }
+
+            return false;
+        }
+
+        /**
+         * UC5: Clear all pending requests from queue
+         * Use with caution
+         */
+        public void clearQueue() {
+            int clearedCount = requestQueue.size();
+            requestQueue.clear();
+            System.out.println("✓ Queue cleared - " + clearedCount + " requests removed");
         }
     }
 
@@ -645,47 +674,59 @@ public class BookMyStay {
         System.out.println("\n========================================");
         System.out.println("    BOOK MY STAY - HOTEL BOOKING APP    ");
         System.out.println("========================================");
-        System.out.println("Version: 4.1");
-        System.out.println("Use Case 4: Room Search & Availability Check");
+        System.out.println("Version: 5.1");
+        System.out.println("Use Case 5: Booking Request (First-Come-First-Served)");
         System.out.println("========================================\n");
     }
 
     /**
-     * UC4: Demonstrate guest search scenarios
+     * UC5: Demonstrate multiple guest booking requests
      *
-     * @param searchService RoomSearchService instance
+     * @param requestQueue BookingRequestQueue instance
+     * @param inventory RoomInventory instance
      */
-    public static void demonstrateGuestSearches(RoomSearchService searchService) {
+    public static void demonstrateBookingRequests(BookingRequestQueue requestQueue,
+                                                  RoomInventory inventory) {
         System.out.println("\n========================================");
-        System.out.println("    GUEST SEARCH SCENARIOS               ");
+        System.out.println("    GUEST BOOKING REQUESTS               ");
         System.out.println("========================================");
 
-        // UC4: Scenario 1 - Search all available rooms
-        System.out.println("\n--- SCENARIO 1: Guest searches for all available rooms ---");
-        searchService.displaySearchResults();
+        // UC5: Scenario 1 - Multiple guests submit requests simultaneously
+        System.out.println("\n--- SCENARIO 1: Multiple booking requests arrive ---");
+        System.out.println("(Simulating peak demand - requests submitted in quick succession)\n");
 
-        // UC4: Scenario 2 - Search statistics
-        System.out.println("\n--- SCENARIO 2: View search statistics ---");
-        searchService.displaySearchStatistics();
+        requestQueue.addBookingRequest("Rajesh Kumar", "Single Room", 3);
+        requestQueue.addBookingRequest("Priya Sharma", "Double Room", 2);
+        requestQueue.addBookingRequest("Amit Patel", "Suite Room", 4);
+        requestQueue.addBookingRequest("Neha Singh", "Double Room", 1);
+        requestQueue.addBookingRequest("Vikram Gupta", "Single Room", 5);
+        requestQueue.addBookingRequest("Anjali Verma", "Suite Room", 2);
 
-        // UC4: Scenario 3 - Filter by price range
-        System.out.println("\n--- SCENARIO 3: Filter rooms by price (₹2000 - ₹4000) ---");
-        List<String> priceFiltered = searchService.filterByPrice(2000, 4000);
-        System.out.println("Rooms within budget: " + priceFiltered);
+        // UC5: Display queue status
+        System.out.println("\n--- SCENARIO 2: View pending requests (FIFO order) ---");
+        requestQueue.displayPendingRequests();
 
-        // UC4: Scenario 4 - Filter by number of beds
-        System.out.println("\n--- SCENARIO 4: Filter rooms with 2 beds ---");
-        List<String> bedFiltered = searchService.filterByBeds(2);
-        System.out.println("Rooms with 2 beds: " + bedFiltered);
+        // UC5: Display queue statistics
+        System.out.println("\n--- SCENARIO 3: Queue statistics ---");
+        requestQueue.displayQueueStatistics();
 
-        // UC4: Scenario 5 - Check specific room availability
-        System.out.println("\n--- SCENARIO 5: Check specific room availability ---");
-        System.out.println("Is Single Room available? " +
-                searchService.isRoomAvailable("Single Room"));
-        System.out.println("Is Suite Room available? " +
-                searchService.isRoomAvailable("Suite Room"));
-        System.out.println("Single Room availability: " +
-                searchService.getAvailabilityCount("Single Room"));
+        // UC5: Process requests one by one (FIFO principle)
+        System.out.println("\n--- SCENARIO 4: Process booking requests (FIFO order) ---");
+        System.out.println("(Processing in the exact order they were received)\n");
+
+        int processedCount = 0;
+        while (requestQueue.hasPendingRequests() && processedCount < 4) {
+            requestQueue.processNextBooking(inventory);
+            processedCount++;
+        }
+
+        // UC5: Display remaining queue
+        System.out.println("\n--- SCENARIO 5: Remaining pending requests ---");
+        requestQueue.displayPendingRequests();
+
+        // UC5: Display current inventory
+        System.out.println("\n--- SCENARIO 6: Current inventory after processing ---");
+        inventory.displayInventory();
     }
 
     // ============================================
@@ -694,7 +735,7 @@ public class BookMyStay {
 
     /**
      * Main method - Entry point of the application
-     * Demonstrates UC4: Room search and availability checking
+     * Demonstrates UC5: Booking request queue management with FIFO principle
      *
      * @param args Command line arguments (not used)
      */
@@ -705,56 +746,61 @@ public class BookMyStay {
         // Create and initialize centralized inventory
         System.out.println("--- STEP 1: Initialize System ---");
         RoomInventory inventory = new RoomInventory();
-
-        // Display initial inventory
         inventory.displayInventory();
 
-        // Perform some bookings to change inventory state
-        System.out.println("\n--- STEP 2: Simulate Some Bookings ---");
-        inventory.bookRoom("Single Room");
-        inventory.bookRoom("Single Room");
-        inventory.bookRoom("Double Room");
-        inventory.bookRoom("Double Room");
-        inventory.bookRoom("Suite Room");
+        // UC5: Create booking request queue (NEW)
+        System.out.println("\n--- STEP 2: Initialize Booking Request Queue ---");
+        BookingRequestQueue requestQueue = new BookingRequestQueue();
+        System.out.println("✓ Booking request queue initialized!");
+        System.out.println("  Data Structure: Queue (LinkedList)");
+        System.out.println("  Processing Model: FIFO (First-Come-First-Served)");
 
-        // Display updated inventory after bookings
-        inventory.displayInventory();
-        inventory.displayOccupancyStats();
-
-        // UC4: Create room search service (NEW)
-        System.out.println("\n--- STEP 3: Initialize Room Search Service ---");
-        RoomSearchService searchService = new RoomSearchService(inventory);
-        System.out.println("✓ Search service initialized successfully!");
-
-        // UC4: Demonstrate guest search scenarios (NEW)
-        System.out.println("\n--- STEP 4: Demonstrate Guest Search Operations ---");
-        demonstrateGuestSearches(searchService);
-
-        // Verify inventory has not been modified by search operations
-        System.out.println("\n--- STEP 5: Verify Inventory Unchanged After Searches ---");
-        System.out.println("✓ Search operations are READ-ONLY");
-        System.out.println("✓ Inventory state has NOT been modified");
-        inventory.displayInventory();
+        // UC5: Demonstrate booking requests (NEW)
+        System.out.println("\n--- STEP 3: Demonstrate Booking Requests ---");
+        demonstrateBookingRequests(requestQueue, inventory);
 
         // Final status message
         System.out.println("\n========================================");
-        System.out.println("UC4 Demonstration Complete!");
-        System.out.println("Room search functionality established.");
-        System.out.println("Separation of read and write operations confirmed.");
-        System.out.println("Ready for booking queue management in UC5...");
+        System.out.println("UC5 Demonstration Complete!");
+        System.out.println("Booking request queue established.");
+        System.out.println("FIFO fairness principle demonstrated.");
+        System.out.println("Ready for advanced queue management in UC6...");
         System.out.println("========================================\n");
 
-        // Display UC4 advantages
+        // Display UC5 advantages
         System.out.println("========================================");
-        System.out.println("    UC4 ADVANTAGES - SAFE SEARCH ACCESS ");
+        System.out.println("    UC5 ADVANTAGES - FAIR FIFO BOOKING  ");
         System.out.println("========================================");
-        System.out.println("\n✓ Read-only search operations");
-        System.out.println("✓ Defensive programming with validation checks");
-        System.out.println("✓ Separation of search from booking logic");
-        System.out.println("✓ Inventory remains consistent and safe");
-        System.out.println("✓ Clear separation of concerns");
-        System.out.println("✓ Filtering capabilities for guest preferences");
-        System.out.println("✓ No unintended side effects");
+        System.out.println("\n✓ Queue data structure ensures FIFO order");
+        System.out.println("✓ Fair allocation - first come, first served");
+        System.out.println("✓ O(1) average-time insertion and removal");
+        System.out.println("✓ Request ordering preserved automatically");
+        System.out.println("✓ Decoupled request intake from allocation");
+        System.out.println("✓ Handles peak demand fairly");
+        System.out.println("✓ Scales well with multiple simultaneous requests");
+        System.out.println("✓ Eliminates unfair booking advantage");
+        System.out.println("\n========================================\n");
+
+        // Display Queue vs Other Structures
+        System.out.println("========================================");
+        System.out.println("    WHY QUEUE FOR BOOKING REQUESTS?     ");
+        System.out.println("========================================");
+        System.out.println("\nComparison with other data structures:\n");
+        System.out.println("Stack:");
+        System.out.println("  ✗ LIFO (Last-In-First-Out)");
+        System.out.println("  ✗ Unfair - latest requests processed first");
+        System.out.println("  ✗ Not suitable for booking fairness\n");
+
+        System.out.println("List/ArrayList:");
+        System.out.println("  ? Can maintain order but no inherent FIFO");
+        System.out.println("  ✗ Requires manual index management");
+        System.out.println("  ✗ Less efficient for queue operations\n");
+
+        System.out.println("Queue/LinkedList:");
+        System.out.println("  ✓ FIFO (First-In-First-Out)");
+        System.out.println("  ✓ Natural fairness - first request processed first");
+        System.out.println("  ✓ O(1) add and remove operations");
+        System.out.println("  ✓ Perfect for booking systems");
         System.out.println("\n========================================\n");
     }
 }
