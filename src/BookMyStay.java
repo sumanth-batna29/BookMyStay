@@ -1,4 +1,4 @@
-public class UseCase1HotelBookingApp {
+public class BookMyStay {
 
     // Application metadata constants
     private static final String APP_NAME = "Book My Stay";
